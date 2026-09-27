@@ -1,0 +1,191 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="tertiary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>
+      <ion-icon name="restaurant-outline"></ion-icon>
+      Monitor de Cocina
+    </ion-title>
+    <ion-note slot="end" class="time-display">
+      {{ currentTime | date:'HH:mm:ss' }}
+    </ion-note>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="kitchen-content">
+
+  <!-- Tabs -->
+  <ion-segment [(ngModel)]="selectedTab" class="kitchen-tabs">
+    <ion-segment-button value="pending">
+      <ion-label>
+        <ion-icon name="flame-outline"></ion-icon>
+        Activos en Cocina
+      </ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="completed">
+      <ion-label>
+        <ion-icon name="checkmark-circle-outline"></ion-icon>
+        Despachados
+      </ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Pedidos Pendientes -->
+  <div class="orders-grid" *ngIf="selectedTab === 'pending'">
+    <ng-container *ngIf="pendingOrders$ | async as orders">
+      <div class="order-ticket" *ngFor="let order of orders"
+        [class.in-progress]="order.status === 'in-progress'"
+        [class.urgent]="getUrgencyColor(order.createdAt) === 'danger'">
+
+        <div class="ticket-header">
+          <div class="ticket-number">
+            <span class="number">#{{ order.orderNumber }}</span>
+            <span class="delivery-badge" [class.llevar]="order.orderType === 'Para Llevar'" [class.aqui]="order.orderType === 'Comer Aquí'">
+              {{ order.orderType === 'Para Llevar' ? '🥡 Para Llevar' : '🍽️ Comer Aquí' }}
+            </span>
+          </div>
+          <div class="ticket-timer" [class]="getUrgencyColor(order.createdAt)">
+            <ion-icon name="time-outline"></ion-icon>
+            {{ getElapsedTime(order.createdAt) }}
+          </div>
+        </div>
+
+        <div class="ticket-customer">
+          <ion-icon name="person-outline"></ion-icon>
+          {{ (order.customerName && order.customerName.toLowerCase() !== 'sin nombre') ? order.customerName : 'Cliente Mostrador' }}
+        </div>
+
+        <div class="ticket-items">
+          <div class="ticket-item" *ngFor="let item of order.items">
+            <span class="qty">{{ item.quantity }}x</span>
+            <span class="name">{{ item.productName }}</span>
+          </div>
+        </div>
+
+        <div class="ticket-notes" *ngIf="order.notes">
+          <ion-icon name="chatbubble-ellipses-outline"></ion-icon>
+          {{ order.notes }}
+        </div>
+
+        <div class="ticket-actions">
+          <ion-button
+            *ngIf="order.status === 'pending'"
+            expand="block"
+            color="primary"
+            (click)="startOrder(order)">
+            <ion-icon name="play-outline" slot="start"></ion-icon>
+            Preparar
+          </ion-button>
+          <ion-button
+            *ngIf="order.status === 'in-progress'"
+            expand="block"
+            color="success"
+            (click)="completeOrder(order)">
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+            Despachar / Listo
+          </ion-button>
+          <ion-button
+            expand="block"
+            color="danger"
+            fill="outline"
+            (click)="cancelOrder(order)"
+            size="small">
+            <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+            Cancelar
+          </ion-button>
+        </div>
+      </div>
+
+      <div class="empty-kitchen" *ngIf="orders.length === 0">
+        <ion-icon name="checkmark-done-circle-outline"></ion-icon>
+        <h3>Sin pedidos pendientes</h3>
+        <p>Los nuevos pedidos entrarán automáticamente aquí</p>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Pedidos Completados -->
+  <div class="completed-list" *ngIf="selectedTab === 'completed'">
+    <ng-container *ngIf="completedOrders$ | async as orders">
+      <ion-list lines="none" class="completed-orders-list">
+        <ion-item *ngFor="let order of orders" class="completed-item" button (click)="viewOrderDetail(order)">
+          <ion-icon name="checkmark-circle" color="success" slot="start"></ion-icon>
+          <ion-label>
+            <h3>Pedido #{{ order.orderNumber }} - {{ order.orderType }}{{ order.tableNumber ? ' #' + order.tableNumber : '' }}</h3>
+            <p>{{ (order.customerName && order.customerName.toLowerCase() !== 'sin nombre') ? order.customerName : 'Cliente Mostrador' }} - {{ order.items.length }} items ({{ order.paymentMethod }})</p>
+            <p class="completed-time" *ngIf="order.completedAt">
+              Despachado: {{ order.completedAt | date:'HH:mm' }}
+            </p>
+          </ion-label>
+          <ion-icon name="chevron-forward-outline" slot="end" class="detail-arrow"></ion-icon>
+          <ion-note slot="end">${{ order.total | number:'1.0-0' }}</ion-note>
+        </ion-item>
+      </ion-list>
+
+      <div class="empty-kitchen" *ngIf="orders.length === 0">
+        <ion-icon name="receipt-outline"></ion-icon>
+        <h3>Sin pedidos despachados</h3>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Detalle de orden completada -->
+  <div class="order-detail-overlay" *ngIf="selectedOrder" (click)="closeDetail()">
+    <div class="order-detail-panel" (click)="$event.stopPropagation()">
+      <div class="detail-header">
+        <h2>Pedido #{{ selectedOrder.orderNumber }}</h2>
+        <ion-button fill="clear" (click)="closeDetail()">
+          <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div class="detail-info">
+        <div class="info-row">
+          <ion-icon name="person-outline"></ion-icon>
+          <span>{{ (selectedOrder.customerName && selectedOrder.customerName.toLowerCase() !== 'sin nombre') ? selectedOrder.customerName : 'Cliente Mostrador' }}</span>
+        </div>
+        <div class="info-row">
+          <ion-icon name="restaurant-outline"></ion-icon>
+          <span>{{ selectedOrder.orderType }} ({{ selectedOrder.paymentMethod }})</span>
+        </div>
+        <div class="info-row">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>Creado: {{ selectedOrder.createdAt | date:'HH:mm:ss' }}</span>
+        </div>
+        <div class="info-row" *ngIf="selectedOrder.completedAt">
+          <ion-icon name="checkmark-done-outline"></ion-icon>
+          <span>Despachado: {{ selectedOrder.completedAt | date:'HH:mm:ss' }}</span>
+        </div>
+      </div>
+
+      <div class="detail-items">
+        <h4>Productos</h4>
+        <div class="detail-item" *ngFor="let item of selectedOrder.items">
+          <span class="qty">{{ item.quantity }}x</span>
+          <span class="name">{{ item.productName }}</span>
+          <span class="price">${{ item.subtotal | number:'1.0-0' }}</span>
+        </div>
+      </div>
+
+      <div class="detail-notes" *ngIf="selectedOrder.notes">
+        <h4>Notas</h4>
+        <p>{{ selectedOrder.notes }}</p>
+      </div>
+
+      <div class="detail-totals">
+        <div class="total-row total-final">
+          <span>Total</span>
+          <span>${{ selectedOrder.total | number:'1.0-0' }}</span>
+        </div>
+      </div>
+
+      <div class="detail-actions" *ngIf="selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'reversed'">
+        <ion-button expand="block" color="danger" fill="outline" (click)="reversarOrder(selectedOrder)">
+          <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
+          Reversar Pedido
+        </ion-button>
+      </div>
+    </div>
+  </div>
+</ion-content>

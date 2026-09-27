@@ -1,0 +1,115 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="success">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ showInvoices ? 'Historial / Facturas' : 'Historial de Pedidos' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="orders-content">
+  <ng-container *ngIf="orders$ | async as orders">
+    <ion-list lines="none" class="orders-list" *ngIf="!selectedOrder">
+      <ion-item *ngFor="let order of orders" class="order-item" (click)="viewDetails(order)" button>
+        <div class="order-number" slot="start">
+          <span>#{{ order.orderNumber }}</span>
+        </div>
+        <ion-label>
+          <h3>{{ order.customerName || 'Cliente Mostrador' }}</h3>
+          <p>{{ order.items.length }} items - {{ order.createdAt | date:'dd/MM/yyyy h:mm a' }}</p>
+          <div class="order-sub-tags">
+            <span class="tag-type">{{ order.orderType === 'Para Llevar' ? '🥡 Para Llevar' : '🍽️ Comer Aquí' }}</span>
+            <span class="tag-pay">{{ order.paymentMethod }}</span>
+          </div>
+        </ion-label>
+        <div slot="end" class="order-end">
+          <ion-badge [color]="getStatusColor(order.status)">
+            {{ getStatusLabel(order.status) }}
+          </ion-badge>
+          <span class="order-total">${{ order.total | number:'1.0-0' }}</span>
+        </div>
+      </ion-item>
+    </ion-list>
+
+    <div class="empty-state" *ngIf="orders.length === 0 && !selectedOrder">
+      <ion-icon name="receipt-outline"></ion-icon>
+      <h3>Sin pedidos</h3>
+      <p>Los pedidos aparecerán aquí</p>
+    </div>
+  </ng-container>
+
+  <!-- Detalle del pedido -->
+  <div class="order-detail" *ngIf="selectedOrder">
+    <div class="detail-header">
+      <ion-button fill="clear" (click)="closeDetails()">
+        <ion-icon name="arrow-back" slot="start"></ion-icon>
+        Volver
+      </ion-button>
+      <h2>Pedido #{{ selectedOrder.orderNumber }}</h2>
+      <ion-badge [color]="getStatusColor(selectedOrder.status)" class="detail-badge">
+        {{ getStatusLabel(selectedOrder.status) }}
+      </ion-badge>
+    </div>
+
+    <div class="detail-card">
+      <h4>Información</h4>
+      <div class="info-row">
+        <span>Cliente:</span>
+        <span style="font-weight: 700;">{{ selectedOrder.customerName || 'Cliente Mostrador' }}</span>
+      </div>
+      <div class="info-row">
+        <span>Despacho y Pago:</span>
+        <span>{{ selectedOrder.orderType === 'Para Llevar' ? '🥡 Para Llevar' : '🍽️ Comer Aquí' }} ({{ selectedOrder.paymentMethod }})</span>
+      </div>
+      <div class="info-row">
+        <span>Fecha:</span>
+        <span>{{ selectedOrder.createdAt | date:'dd/MM/yyyy h:mm a' }}</span>
+      </div>
+      <div class="info-row" *ngIf="selectedOrder.completedAt">
+        <span>Completado:</span>
+        <span>{{ selectedOrder.completedAt | date:'dd/MM/yyyy h:mm a' }}</span>
+      </div>
+      <div class="info-row">
+        <span>Atendido por:</span>
+        <span>{{ selectedOrder.createdBy }}</span>
+      </div>
+    </div>
+
+    <div class="detail-card">
+      <h4>Productos</h4>
+      <div class="detail-item" *ngFor="let item of selectedOrder.items">
+        <span class="item-qty">{{ item.quantity }}x</span>
+        <span class="item-name">{{ item.productName }}<span *ngIf="item.cheeseExtra" style="color: #f7931e; font-weight: 600;"> +Queso</span></span>
+        <span class="item-price">${{ item.subtotal | number:'1.0-0' }}</span>
+      </div>
+      <div class="detail-totals">
+        <div class="total-row total"><span>Total a Pagar</span><span>${{ selectedOrder.total | number:'1.0-0' }}</span></div>
+      </div>
+    </div>
+
+    <div class="detail-card" *ngIf="selectedOrder.notes">
+      <h4>Notas</h4>
+      <p class="notes-text">{{ selectedOrder.notes }}</p>
+    </div>
+
+    <!-- Factura - solo visible para Cocina y Admin -->
+    <div class="detail-card" *ngIf="relatedInvoice && showInvoices">
+      <h4>Factura</h4>
+      <div class="info-row">
+        <span>Número:</span>
+        <span>{{ relatedInvoice.invoiceNumber }}</span>
+      </div>
+      <div class="info-row">
+        <span>Negocio:</span>
+        <span>{{ relatedInvoice.businessName }}</span>
+      </div>
+    </div>
+
+    <div class="detail-actions" *ngIf="selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'reversed'">
+      <ion-button expand="block" color="danger" fill="outline" (click)="cancelOrder(selectedOrder)">
+        <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+        Cancelar Pedido
+      </ion-button>
+    </div>
+  </div>
+</ion-content>

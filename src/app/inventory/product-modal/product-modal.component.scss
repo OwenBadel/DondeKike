@@ -1,0 +1,35 @@
+.modal-content {
+  --background: #f9f9f9;
+}
+
+.product-form {
+  padding: 16px;
+}
+
+.form-list {
+  background: transparent;
+  padding: 0;
+}
+
+.form-item {
+  --background: #fff;
+  --border-radius: 12px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.field-error {
+  color: var(--ion-color-danger);
+  font-size: 12px;
+  padding: 2px 16px 8px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+
+  .form-col {
+    flex: 1;
+  }
+}

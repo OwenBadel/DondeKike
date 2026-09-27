@@ -34,4 +34,243 @@
 
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import "@ionic/angular/css/palettes/dark.system.css";
+/* @import "@ionic/angular/css/palettes/dark.system.css"; */
+
+/* =====================================================
+ * Donde Kike POS - Global Styles
+ * ===================================================== */
+
+:root {
+  --ion-color-primary: #3880ff;
+  --ion-color-primary-rgb: 56, 128, 255;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #3171e0;
+  --ion-color-primary-tint: #4c8dff;
+
+  --ion-color-secondary: #3dc2ff;
+  --ion-color-secondary-rgb: 61, 194, 255;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #36abe0;
+  --ion-color-secondary-tint: #50c8ff;
+
+  --ion-color-tertiary: #5260ff;
+  --ion-color-tertiary-rgb: 82, 96, 255;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #4854e0;
+  --ion-color-tertiary-tint: #6370ff;
+
+  --ion-color-success: #2dd36f;
+  --ion-color-success-rgb: 45, 211, 111;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #28ba62;
+  --ion-color-success-tint: #42d77d;
+
+  --ion-color-warning: #ffc409;
+  --ion-color-warning-rgb: 255, 196, 9;
+  --ion-color-warning-contrast: #000000;
+  --ion-color-warning-contrast-rgb: 0, 0, 0;
+  --ion-color-warning-shade: #e0ac08;
+  --ion-color-warning-tint: #ffca22;
+
+  --ion-color-danger: #eb445a;
+  --ion-color-danger-rgb: 235, 68, 90;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #cf3c4f;
+  --ion-color-danger-tint: #ed576b;
+
+  --ion-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+ion-content {
+  --padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Quick toast styling */
+.quick-toast {
+  --max-width: 200px;
+  --border-radius: 20px;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Smooth transitions for all pages */
+ion-router-outlet > * {
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Hide Cancel button in role action-sheet selector */
+.role-action-sheet .action-sheet-cancel {
+  display: none !important;
+}
+
+/* SweetAlert2 - Symmetrical, Minimalist & Modern */
+@import 'sweetalert2/dist/sweetalert2.min.css';
+
+.swal2-container {
+  z-index: 999999 !important;
+  font-family: var(--ion-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+}
+
+/* Ensure toast notifications NEVER blur or block the background */
+body.swal2-toast-shown .swal2-container {
+  background-color: transparent !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: none !important;
+}
+
+body.swal2-toast-shown .swal2-popup.swal2-toast {
+  pointer-events: auto !important;
+}
+
+/* Modal Popup - Perfectly Symmetrical & Minimalist */
+.swal2-popup {
+  width: 90% !important;
+  max-width: 370px !important;
+  padding: 24px 20px 20px !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.14), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  box-sizing: border-box !important;
+}
+
+.swal2-icon {
+  width: 50px !important;
+  height: 50px !important;
+  margin: 2px auto 14px !important;
+  border-width: 2.5px !important;
+
+  .swal2-icon-content {
+    font-size: 26px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
+
+.swal2-title {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.015em !important;
+  padding: 0 !important;
+  margin: 0 0 8px 0 !important;
+  line-height: 1.35 !important;
+  text-align: center !important;
+}
+
+.swal2-html-container {
+  font-size: 13.5px !important;
+  color: #64748b !important;
+  margin: 0 0 18px 0 !important;
+  line-height: 1.45 !important;
+  text-align: center !important;
+}
+
+/* Symmetrical Action Buttons */
+.swal2-actions {
+  display: flex !important;
+  width: 100% !important;
+  margin: 8px 0 0 0 !important;
+  gap: 10px !important;
+  justify-content: center !important;
+
+  button {
+    flex: 1 1 0 !important;
+    max-width: 155px !important;
+    min-height: 40px !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    font-size: 13.5px !important;
+    padding: 8px 16px !important;
+    letter-spacing: 0.01em !important;
+    transition: all 0.15s ease !important;
+    box-shadow: none !important;
+
+    &:active {
+      transform: scale(0.97) !important;
+    }
+  }
+
+  .swal2-confirm {
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+  }
+
+  .swal2-cancel {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #e2e8f0 !important;
+
+    &:hover {
+      background-color: #e2e8f0 !important;
+      color: #1e293b !important;
+    }
+  }
+}
+
+.swal2-select {
+  font-size: 13.5px !important;
+  padding: 8px 12px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  height: 40px !important;
+  margin: 8px auto 14px auto !important;
+  width: 100% !important;
+  max-width: 280px !important;
+  color: #1e293b !important;
+  background-color: #f8fafc !important;
+  outline: none !important;
+  transition: border-color 0.2s !important;
+
+  &:focus {
+    border-color: #10b981 !important;
+  }
+}
+
+/* SweetAlert2 Toast - Symmetrical Floating Pill */
+.swal2-popup.swal2-toast {
+  width: auto !important;
+  max-width: 320px !important;
+  padding: 10px 16px !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.04) !important;
+  display: flex !important;
+  align-items: center !important;
+
+  .swal2-title {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    margin: 0 !important;
+    padding: 0 0 0 8px !important;
+    text-align: left !important;
+    line-height: 1.35 !important;
+  }
+
+  .swal2-icon {
+    width: 22px !important;
+    height: 22px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .swal2-timer-progress-bar {
+    height: 3px !important;
+    border-radius: 0 0 14px 14px !important;
+  }
+}

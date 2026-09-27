@@ -1,0 +1,67 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="secondary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Inventario de Insumos</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openAddModal()">
+        <ion-icon name="add-circle-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar color="secondary">
+    <ion-searchbar
+      placeholder="Buscar insumo..."
+      (ionInput)="onSearch($event)"
+      [debounce]="300"
+      animated>
+    </ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="inventory-content">
+
+  <!-- Alerta de bajo stock -->
+  <ng-container *ngIf="(lowStockInsumos$ | async) as lowStock">
+    <div class="low-stock-banner" *ngIf="lowStock.length > 0">
+      <ion-icon name="warning-outline"></ion-icon>
+      <span>{{ lowStock.length }} insumo(s) con stock bajo</span>
+    </div>
+  </ng-container>
+
+  <!-- Lista de insumos -->
+  <div class="products-list">
+    <ion-card *ngFor="let insumo of filteredInsumos" class="product-card" [class.low-stock]="isLowStock(insumo)">
+      <ion-card-content class="product-content">
+
+        <div class="product-info">
+          <h3>{{ insumo.name }}</h3>
+          <div class="stock-row">
+            <ion-badge [color]="getStockColor(insumo)">
+              Stock: {{ insumo.stock }}
+            </ion-badge>
+            <span class="stock-threshold" *ngIf="isLowStock(insumo)">
+              Mín: {{ insumo.lowStockThreshold }}
+            </span>
+          </div>
+        </div>
+
+        <div class="product-actions">
+          <ion-button fill="clear" size="small" (click)="openEditModal(insumo)">
+            <ion-icon name="create-outline" slot="icon-only" color="primary"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" size="small" (click)="confirmDelete(insumo)">
+            <ion-icon name="trash-outline" slot="icon-only" color="danger"></ion-icon>
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <div class="empty-state" *ngIf="filteredInsumos.length === 0">
+      <ion-icon name="cube-outline"></ion-icon>
+      <h3>No hay insumos</h3>
+      <p>Agrega insumos usando el botón +</p>
+    </div>
+  </div>
+</ion-content>

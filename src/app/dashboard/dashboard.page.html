@@ -1,0 +1,89 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-title>Donde Kike POS</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">
+        <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="dashboard-content">
+  <!-- Welcome Section -->
+  <div class="welcome-section" *ngIf="user$ | async as user">
+    <div class="welcome-text">
+      <h2>¡Hola, {{ user.fullName }}!</h2>
+    </div>
+    <ion-icon name="fast-food" class="welcome-icon"></ion-icon>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid">
+    <div class="stat-card orange">
+      <ion-icon name="receipt-outline"></ion-icon>
+      <div class="stat-info">
+        <span class="stat-value">{{ (todayOrdersCount$ | async) || 0 }}</span>
+        <span class="stat-label">Pedidos Hoy</span>
+      </div>
+    </div>
+
+    <div class="stat-card green" (click)="navigateTo('/sales')" style="cursor: pointer;">
+      <ion-icon name="cash-outline"></ion-icon>
+      <div class="stat-info">
+        <span class="stat-value">${{ ((todayRevenue$ | async) || 0) | number:'1.0-0' }}</span>
+        <span class="stat-label">Ventas Hoy</span>
+      </div>
+    </div>
+
+    <div class="stat-card blue">
+      <ion-icon name="time-outline"></ion-icon>
+      <div class="stat-info">
+        <span class="stat-value">{{ (pendingOrdersCount$ | async) || 0 }}</span>
+        <span class="stat-label">Pendientes</span>
+      </div>
+    </div>
+
+    <div class="stat-card purple">
+      <ion-icon name="cube-outline"></ion-icon>
+      <div class="stat-info">
+        <span class="stat-value">{{ (totalInsumos$ | async) || 0 }}</span>
+        <span class="stat-label">Insumos</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <h3 class="section-title">Acciones Rápidas</h3>
+  <div class="actions-grid">
+    <ng-container *ngFor="let item of menuItems">
+      <div class="action-card" *ngIf="isMenuVisible(item)" (click)="navigateTo(item.route)">
+        <div class="action-icon" [attr.data-color]="item.color">
+          <ion-icon [name]="item.icon"></ion-icon>
+        </div>
+        <span class="action-label">{{ item.title }}</span>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Low Stock Alert -->
+  <ng-container *ngIf="(lowStockInsumos$ | async) as lowStock">
+    <div class="alert-section" *ngIf="lowStock.length > 0">
+      <h3 class="section-title">
+        <ion-icon name="warning-outline" color="warning"></ion-icon>
+        Stock Bajo ({{ lowStock.length }})
+      </h3>
+      <ion-list lines="none" class="low-stock-list">
+        <ion-item *ngFor="let insumo of lowStock" class="low-stock-item">
+          <ion-icon name="alert-circle" color="danger" slot="start"></ion-icon>
+          <ion-label>
+            <h3>{{ insumo.name }}</h3>
+            <p>Stock: <strong>{{ insumo.stock }}</strong> / Mínimo: {{ insumo.lowStockThreshold }}</p>
+          </ion-label>
+          <ion-badge color="danger" slot="end">{{ insumo.stock }}</ion-badge>
+        </ion-item>
+      </ion-list>
+    </div>
+  </ng-container>
+
+</ion-content>
