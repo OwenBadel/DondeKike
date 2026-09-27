@@ -1,0 +1,72 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="tertiary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Catálogo de Comidas</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openAddModal()">
+        <ion-icon name="add-circle-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar color="tertiary">
+    <ion-searchbar
+      placeholder="Buscar comida..."
+      (ionInput)="onSearch($event)"
+      [debounce]="300"
+      animated>
+    </ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="catalog-content">
+  <!-- Filtro por categorías -->
+  <ion-segment [scrollable]="true" class="category-segment" [value]="selectedCategory" (ionChange)="onCategoryFilter($event)">
+    <ion-segment-button value="">
+      <ion-label>Todas</ion-label>
+    </ion-segment-button>
+    <ion-segment-button
+      *ngFor="let cat of categories"
+      [value]="cat">
+      <ion-label>{{ cat }}</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Lista de comidas -->
+  <div class="items-list">
+    <ion-card *ngFor="let item of filteredItems" class="item-card">
+      <ion-card-content class="item-content">
+        <div class="item-image">
+          <ion-icon *ngIf="!item.image" name="restaurant-outline" class="placeholder-icon"></ion-icon>
+          <img *ngIf="item.image" [src]="item.image" [alt]="item.name" />
+        </div>
+
+        <div class="item-info">
+          <h3>{{ item.name }}</h3>
+          <p class="item-desc">{{ item.content }}</p>
+          <div class="item-meta">
+            <ion-badge color="medium">{{ item.category }}</ion-badge>
+            <span class="item-price">${{ item.price | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="item-actions">
+          <ion-button fill="clear" size="small" (click)="openEditModal(item)">
+            <ion-icon name="create-outline" slot="icon-only" color="primary"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" size="small" (click)="confirmDelete(item)">
+            <ion-icon name="trash-outline" slot="icon-only" color="danger"></ion-icon>
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <div class="empty-state" *ngIf="filteredItems.length === 0">
+      <ion-icon name="restaurant-outline"></ion-icon>
+      <h3>No hay comidas en el catálogo</h3>
+      <p>Agrega comidas usando el botón +</p>
+    </div>
+  </div>
+
+</ion-content>

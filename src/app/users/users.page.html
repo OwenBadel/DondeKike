@@ -1,0 +1,67 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Usuarios</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openCreateModal()">
+        <ion-icon name="person-add-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="users-content">
+
+  <div class="users-count">
+    <ion-icon name="people-outline"></ion-icon>
+    <span>{{ users.length }} usuario(s) registrado(s)</span>
+  </div>
+
+  <div class="users-list">
+    <ion-card *ngFor="let user of users" class="user-card" [class.is-admin]="isDefaultAdmin(user)">
+      <ion-card-content class="user-content">
+
+        <div class="user-avatar" [attr.data-role]="user.role">
+          <ion-icon [name]="getUserIcon(user.role)"></ion-icon>
+        </div>
+
+        <div class="user-info">
+          <h3>
+            {{ user.fullName }}
+            <ion-icon name="shield-checkmark" color="danger" *ngIf="isDefaultAdmin(user)" class="admin-badge"></ion-icon>
+          </h3>
+          <p class="username">@{{ user.username }}</p>
+          <div class="user-meta">
+            <ion-badge [color]="getRoleColor(user.role)">
+              <ion-icon [name]="getRoleIcon(user.role)"></ion-icon>
+              {{ getRoleLabel(user.role) }}
+            </ion-badge>
+          </div>
+        </div>
+
+        <div class="user-actions" *ngIf="!isDefaultAdmin(user)">
+          <ion-button fill="clear" size="small" (click)="confirmChangeRole(user)" title="Cambiar rol">
+            <ion-icon name="swap-horizontal-outline" slot="icon-only" color="primary"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" size="small" (click)="confirmDelete(user)" title="Eliminar">
+            <ion-icon name="trash-outline" slot="icon-only" color="danger"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="user-actions" *ngIf="isDefaultAdmin(user)">
+          <ion-icon name="lock-closed-outline" color="medium" class="lock-icon"></ion-icon>
+        </div>
+
+      </ion-card-content>
+    </ion-card>
+
+    <div class="empty-state" *ngIf="users.length === 0">
+      <ion-icon name="people-outline"></ion-icon>
+      <h3>No hay usuarios</h3>
+      <p>Agrega usuarios usando el botón +</p>
+    </div>
+  </div>
+
+</ion-content>

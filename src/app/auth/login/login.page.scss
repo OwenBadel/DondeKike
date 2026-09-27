@@ -1,0 +1,171 @@
+.login-content {
+  --background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff4444 100%);
+}
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 16px));
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 24px;
+  color: #fff;
+
+  .logo-img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+  }
+
+  p {
+    font-size: 14px;
+    opacity: 0.9;
+    margin: 0;
+  }
+}
+
+// Username
+.username-section {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+
+.username-item {
+  --background: rgba(255, 255, 255, 0.95);
+  --border-radius: 12px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  border-radius: 12px;
+
+  ion-icon {
+    color: #ff6b35;
+    margin-right: 8px;
+  }
+}
+
+// PIN
+.pin-section {
+  text-align: center;
+  margin-bottom: 12px;
+
+  .pin-label {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 14px;
+    margin: 0 0 12px 0;
+  }
+}
+
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+
+  .dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    background: transparent;
+    transition: all 0.15s ease;
+
+    &.filled {
+      background: #fff;
+      border-color: #fff;
+      transform: scale(1.15);
+    }
+  }
+}
+
+// Error
+.error-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #ffe0e0;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  max-width: 320px;
+  width: 100%;
+
+  ion-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+}
+
+// Numpad
+.numpad {
+  width: 100%;
+  max-width: 280px;
+  margin-top: 8px;
+}
+
+.numpad-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.numpad-key {
+  width: 72px;
+  height: 56px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+
+  &:active {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(0.93);
+  }
+
+  &.empty {
+    background: transparent;
+    cursor: default;
+  }
+
+  &.del-key {
+    background: rgba(255, 255, 255, 0.12);
+
+    ion-icon {
+      font-size: 22px;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+// Loading
+.loading-indicator {
+  margin-top: 16px;
+}

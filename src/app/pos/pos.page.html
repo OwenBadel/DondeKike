@@ -1,0 +1,128 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Punto de Venta</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleCart()" class="cart-button">
+        <ion-icon name="cart-outline" slot="icon-only"></ion-icon>
+        <ion-badge color="danger" class="cart-badge" *ngIf="(cartCount$ | async) as count">
+          {{ count }}
+        </ion-badge>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar color="primary">
+    <ion-searchbar
+      placeholder="Buscar producto..."
+      (ionInput)="onSearch($event)"
+      [debounce]="250"
+      animated>
+    </ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="pos-content">
+  <!-- Categorías -->
+  <div class="categories-scroll">
+    <ion-chip
+      [color]="selectedCategory === '' ? 'primary' : 'medium'"
+      (click)="onCategorySelect('')">
+      <ion-icon name="grid-outline"></ion-icon>
+      <ion-label>Todo</ion-label>
+    </ion-chip>
+    <ion-chip
+      *ngFor="let cat of categories"
+      [color]="selectedCategory === cat ? 'primary' : 'medium'"
+      (click)="onCategorySelect(cat)">
+      <ion-label>{{ cat }}</ion-label>
+    </ion-chip>
+  </div>
+
+  <!-- Catálogo de productos táctil -->
+  <div class="catalog-grid" [class.with-cart]="showCart">
+    <div class="product-tile" *ngFor="let item of filteredProducts" (click)="addToCart(item)">
+      <div class="tile-image">
+        <ion-icon *ngIf="!item.image" name="fast-food-outline" class="tile-placeholder"></ion-icon>
+        <img *ngIf="item.image" [src]="item.image" [alt]="item.name" />
+      </div>
+      <div class="tile-info">
+        <h4>{{ item.name }}</h4>
+        <span class="tile-price">${{ item.price | number:'1.0-0' }}</span>
+      </div>
+      <ion-icon name="add-circle" class="add-icon" color="primary"></ion-icon>
+    </div>
+
+    <div class="empty-catalog" *ngIf="filteredProducts.length === 0">
+      <ion-icon name="search-outline"></ion-icon>
+      <p>No se encontraron productos</p>
+    </div>
+  </div>
+
+  <!-- Panel del carrito (lateral / overlay) -->
+  <div class="cart-panel" [class.open]="showCart">
+    <div class="cart-header">
+      <h3>
+        <ion-icon name="cart"></ion-icon>
+        Carrito
+      </h3>
+      <ion-button fill="clear" size="small" (click)="toggleCart()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </div>
+
+    <div class="cart-items" *ngIf="cartItems$ | async as items">
+      <div class="cart-empty" *ngIf="items.length === 0">
+        <ion-icon name="cart-outline"></ion-icon>
+        <p>Carrito vacío</p>
+      </div>
+
+      <div class="cart-item" *ngFor="let item of items">
+        <div class="item-row">
+          <div class="item-info">
+            <span class="item-name">{{ item.productName }}</span>
+            <span class="item-price">${{ item.unitPrice | number:'1.0-0' }} c/u</span>
+          </div>
+          <div class="item-controls">
+            <ion-button fill="clear" size="small" (click)="decrementItem(item)">
+              <ion-icon name="remove-circle-outline" slot="icon-only" color="danger"></ion-icon>
+            </ion-button>
+            <span class="item-qty">{{ item.quantity }}</span>
+            <ion-button fill="clear" size="small" (click)="incrementItem(item)">
+              <ion-icon name="add-circle-outline" slot="icon-only" color="primary"></ion-icon>
+            </ion-button>
+          </div>
+          <span class="item-subtotal">${{ item.subtotal | number:'1.0-0' }}</span>
+        </div>
+        <div class="cheese-row" *ngIf="item.catalogItem.category !== 'Bebidas'" (click)="toggleCheese(item)" [class.active]="item.cheeseExtra">
+          <ion-icon [name]="item.cheeseExtra ? 'checkbox' : 'square-outline'"></ion-icon>
+          <span>Queso extra</span>
+          <span class="cheese-price">+$3.000</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cart-summary">
+      <div class="summary-row total">
+        <span>Total a Cobrar</span>
+        <span class="total-amount">${{ (cartTotal$ | async) | number:'1.0-0' }}</span>
+      </div>
+
+      <div class="cart-actions">
+        <ion-button expand="block" color="danger" fill="outline" (click)="clearCart()" size="small">
+          <ion-icon name="trash-outline" slot="start"></ion-icon>
+          Vaciar
+        </ion-button>
+        <ion-button expand="block" color="success" (click)="openCheckout()">
+          <ion-icon name="cash-outline" slot="start"></ion-icon>
+          Cobrar / Confirmar
+        </ion-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay para cerrar carrito -->
+  <div class="cart-overlay" *ngIf="showCart" (click)="toggleCart()"></div>
+
+</ion-content>

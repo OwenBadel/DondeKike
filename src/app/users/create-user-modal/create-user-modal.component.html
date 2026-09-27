@@ -1,0 +1,80 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Nuevo Usuario</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="onRegister()" [strong]="true" color="primary"
+                  [disabled]="registerForm.invalid || pin.length !== 4">
+        Crear
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="modal-content">
+  <form [formGroup]="registerForm" class="register-form">
+
+    <div class="form-header">
+      <ion-icon name="person-add-outline" color="primary"></ion-icon>
+      <p>Complete los datos del nuevo usuario</p>
+    </div>
+
+    <ion-list lines="none" class="form-list">
+      <ion-item class="form-item">
+        <ion-icon name="person-outline" slot="start" color="primary"></ion-icon>
+        <ion-input formControlName="fullName" placeholder="Nombre completo"></ion-input>
+      </ion-item>
+      <div class="field-error" *ngIf="registerForm.get('fullName')?.touched && registerForm.get('fullName')?.invalid">
+        {{ getError('fullName') }}
+      </div>
+
+      <ion-item class="form-item">
+        <ion-icon name="at-outline" slot="start" color="primary"></ion-icon>
+        <ion-input formControlName="username" placeholder="Nombre de usuario" autocapitalize="off"></ion-input>
+      </ion-item>
+      <div class="field-error" *ngIf="registerForm.get('username')?.touched && registerForm.get('username')?.invalid">
+        {{ getError('username') }}
+      </div>
+
+      <ion-item class="form-item">
+        <ion-icon name="briefcase-outline" slot="start" color="primary"></ion-icon>
+        <ion-select formControlName="role" placeholder="Rol" interface="action-sheet"
+          [interfaceOptions]="{ header: 'Seleccionar Rol', cssClass: 'role-action-sheet' }">
+          <ion-select-option *ngFor="let role of roles" [value]="role.value">
+            {{ role.label }}
+          </ion-select-option>
+        </ion-select>
+      </ion-item>
+    </ion-list>
+
+    <!-- PIN Section -->
+    <div class="pin-section">
+      <p class="pin-label">PIN de acceso (4 dígitos)</p>
+      <div class="pin-dots">
+        <div *ngFor="let dot of pinDots" class="dot" [class.filled]="dot"></div>
+      </div>
+    </div>
+
+    <!-- Numpad -->
+    <div class="numpad">
+      <div class="numpad-row" *ngFor="let row of numpadKeys">
+        <button
+          *ngFor="let key of row"
+          type="button"
+          class="numpad-key"
+          [class.empty]="key === ''"
+          [class.del-key]="key === 'del'"
+          [disabled]="key === ''"
+          (click)="onKeyPress(key)">
+          <ion-icon *ngIf="key === 'del'" name="backspace-outline"></ion-icon>
+          <span *ngIf="key !== 'del'">{{ key }}</span>
+        </button>
+      </div>
+    </div>
+
+  </form>
+</ion-content>

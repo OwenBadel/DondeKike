@@ -1,0 +1,158 @@
+.users-content {
+  --background: #f5f5f5;
+}
+
+.users-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 16px 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+
+  ion-icon {
+    font-size: 20px;
+    color: var(--ion-color-primary);
+  }
+}
+
+.users-list {
+  padding: 8px 12px 80px;
+}
+
+.user-card {
+  border-radius: 16px;
+  margin: 0 0 12px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+
+  &.is-admin {
+    border-left: 4px solid var(--ion-color-danger);
+  }
+
+  .user-content {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+  }
+}
+
+.user-avatar {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8eaf6;
+
+  ion-icon {
+    font-size: 36px;
+    color: var(--ion-color-primary);
+  }
+
+  &[data-role="admin"] {
+    background: #fce4ec;
+
+    ion-icon {
+      color: var(--ion-color-danger);
+    }
+  }
+
+  &[data-role="waiter"] {
+    background: #e3f2fd;
+
+    ion-icon {
+      color: var(--ion-color-primary);
+    }
+  }
+
+  &[data-role="kitchen"] {
+    background: #fff8e1;
+
+    ion-icon {
+      color: var(--ion-color-warning);
+    }
+  }
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 2px 0;
+    color: #1a1a2e;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .admin-badge {
+      font-size: 16px;
+    }
+  }
+
+  .username {
+    font-size: 13px;
+    color: #999;
+    margin: 0 0 6px 0;
+  }
+
+  .user-meta {
+    ion-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+
+      ion-icon {
+        font-size: 12px;
+      }
+    }
+  }
+}
+
+.user-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+
+  ion-button {
+    --padding-start: 6px;
+    --padding-end: 6px;
+  }
+
+  .lock-icon {
+    font-size: 22px;
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: #999;
+
+  ion-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    font-size: 18px;
+    margin: 0 0 8px 0;
+    color: #666;
+  }
+
+  p {
+    font-size: 14px;
+    margin: 0;
+  }
+}

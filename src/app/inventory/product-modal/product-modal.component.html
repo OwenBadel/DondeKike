@@ -1,0 +1,53 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="cancel()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ mode === 'create' ? 'Nuevo Insumo' : 'Editar Insumo' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()" [strong]="true" color="primary">
+        Guardar
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="modal-content">
+  <form [formGroup]="insumoForm" class="product-form">
+
+    <!-- Campos del formulario -->
+    <ion-list lines="none" class="form-list">
+      <ion-item class="form-item">
+        <ion-label position="stacked">Nombre del insumo *</ion-label>
+        <ion-input formControlName="name" placeholder="Ej: Carne de res"></ion-input>
+      </ion-item>
+      <div class="field-error" *ngIf="insumoForm.get('name')?.touched && insumoForm.get('name')?.invalid">
+        {{ getError('name') }}
+      </div>
+
+      <div class="form-row">
+        <div class="form-col">
+          <ion-item class="form-item">
+            <ion-label position="stacked">Stock *</ion-label>
+            <ion-input formControlName="stock" type="number" placeholder="0"></ion-input>
+          </ion-item>
+          <div class="field-error" *ngIf="insumoForm.get('stock')?.touched && insumoForm.get('stock')?.invalid">
+            {{ getError('stock') }}
+          </div>
+        </div>
+
+        <div class="form-col">
+          <ion-item class="form-item">
+            <ion-label position="stacked">Umbral stock bajo</ion-label>
+            <ion-input formControlName="lowStockThreshold" type="number" placeholder="10"></ion-input>
+          </ion-item>
+          <div class="field-error" *ngIf="insumoForm.get('lowStockThreshold')?.touched && insumoForm.get('lowStockThreshold')?.invalid">
+            {{ getError('lowStockThreshold') }}
+          </div>
+        </div>
+      </div>
+    </ion-list>
+  </form>
+</ion-content>
