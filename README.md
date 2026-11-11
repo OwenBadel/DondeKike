@@ -1,9 +1,9 @@
 # 🍔 Donde Kike POS & Comandas Móviles
 
 > **Sistema Híbrido de Punto de Venta (POS), Comandas en Tiempo Real y Control de Inventarios para Restaurantes y Comidas Rápidas.**  
-> *Desarrollado bajo la titularidad y autoría del **Owen Badel Hooker — Ingeniero de Sistemas**.*
+> *Desarrollado bajo la titularidad y autoría de **Owen Badel Hooker** — Ingeniero de Sistemas.*
 
-[![Author](https://img.shields.io/badge/Autor-Ing.%20Owen%20Badel%20Hooker-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/owen-badel-175851371/)
+[![Author](https://img.shields.io/badge/Autor-Owen%20Badel%20Hooker-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/owen-badel-175851371/)
 [![Framework](https://img.shields.io/badge/Angular-20-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.dev/)
 [![Mobile](https://img.shields.io/badge/Ionic%208-Capacitor%208-3880FF?style=for-the-badge&logo=ionic&logoColor=white)](https://ionicframework.com/)
 [![Database](https://img.shields.io/badge/Supabase-Realtime%20PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
