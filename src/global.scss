@@ -1,129 +1,244 @@
-/*
- * App Global CSS
- * ----------------------------------------------------------------------------
- * Put style rules here that you want to apply globally. These styles are for
- * the entire app and not just one component. Additionally, this file can be
- * used as an entry point to import other CSS/Sass files to be included in the
- * output CSS.
- * For more information on global stylesheets, visit the documentation:
- * https://ionicframework.com/docs/layout/global-stylesheets
- */
+/* ==========================================================================
+ * Donde Kike POS — Estilos Globales y Primitivas Compartidas
+ * ========================================================================== */
 
-/* Core CSS required for Ionic components to work properly */
 @import "@ionic/angular/css/core.css";
-
-/* Basic CSS for apps built with Ionic */
 @import "@ionic/angular/css/normalize.css";
 @import "@ionic/angular/css/structure.css";
 @import "@ionic/angular/css/typography.css";
 @import "@ionic/angular/css/display.css";
-
-/* Optional CSS utils that can be commented out */
 @import "@ionic/angular/css/padding.css";
 @import "@ionic/angular/css/float-elements.css";
 @import "@ionic/angular/css/text-alignment.css";
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
+@import "sweetalert2/dist/sweetalert2.min.css";
 
-/**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
- */
+html,
+body {
+  font-family: var(--dk-font-sans);
+  font-size: clamp(14px, 13.5px + 0.18vw, 16px);
+  color: var(--dk-ink);
+  background: var(--dk-bg);
+  -webkit-font-smoothing: antialiased;
+}
 
-/* @import "@ionic/angular/css/palettes/dark.always.css"; */
-/* @import "@ionic/angular/css/palettes/dark.class.css"; */
-/* @import "@ionic/angular/css/palettes/dark.system.css"; */
-
-/* =====================================================
- * Donde Kike POS - Global Styles
- * ===================================================== */
-
-:root {
-  --ion-color-primary: #3880ff;
-  --ion-color-primary-rgb: 56, 128, 255;
-  --ion-color-primary-contrast: #ffffff;
-  --ion-color-primary-contrast-rgb: 255, 255, 255;
-  --ion-color-primary-shade: #3171e0;
-  --ion-color-primary-tint: #4c8dff;
-
-  --ion-color-secondary: #3dc2ff;
-  --ion-color-secondary-rgb: 61, 194, 255;
-  --ion-color-secondary-contrast: #ffffff;
-  --ion-color-secondary-contrast-rgb: 255, 255, 255;
-  --ion-color-secondary-shade: #36abe0;
-  --ion-color-secondary-tint: #50c8ff;
-
-  --ion-color-tertiary: #5260ff;
-  --ion-color-tertiary-rgb: 82, 96, 255;
-  --ion-color-tertiary-contrast: #ffffff;
-  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
-  --ion-color-tertiary-shade: #4854e0;
-  --ion-color-tertiary-tint: #6370ff;
-
-  --ion-color-success: #2dd36f;
-  --ion-color-success-rgb: 45, 211, 111;
-  --ion-color-success-contrast: #ffffff;
-  --ion-color-success-contrast-rgb: 255, 255, 255;
-  --ion-color-success-shade: #28ba62;
-  --ion-color-success-tint: #42d77d;
-
-  --ion-color-warning: #ffc409;
-  --ion-color-warning-rgb: 255, 196, 9;
-  --ion-color-warning-contrast: #000000;
-  --ion-color-warning-contrast-rgb: 0, 0, 0;
-  --ion-color-warning-shade: #e0ac08;
-  --ion-color-warning-tint: #ffca22;
-
-  --ion-color-danger: #eb445a;
-  --ion-color-danger-rgb: 235, 68, 90;
-  --ion-color-danger-contrast: #ffffff;
-  --ion-color-danger-contrast-rgb: 255, 255, 255;
-  --ion-color-danger-shade: #cf3c4f;
-  --ion-color-danger-tint: #ed576b;
-
-  --ion-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+h1,
+h2,
+h3,
+ion-title {
+  font-family: var(--dk-font-display);
 }
 
 ion-content {
-  --padding-bottom: env(safe-area-inset-bottom);
+  --background: var(--dk-bg);
+  --padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Quick toast styling */
-.quick-toast {
-  --max-width: 200px;
-  --border-radius: 20px;
-  font-size: 13px;
+/* Cabecera unificada en toda la aplicación */
+.dk-toolbar {
+  --background: var(--dk-chrome);
+  --color: #FFFFFF;
+  --border-width: 0;
+  --min-height: 56px;
+
+  ion-title {
+    font-size: clamp(1.02rem, 0.95rem + 0.35vw, 1.18rem);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+
+  ion-back-button,
+  ion-button {
+    --color: #FFFFFF;
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+.dk-sub-toolbar {
+  --background: var(--dk-chrome);
+  --color: #FFFFFF;
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 0;
+  --padding-bottom: 10px;
+
+  ion-searchbar {
+    --background: rgba(255, 255, 255, 0.11);
+    --color: #FFFFFF;
+    --placeholder-color: rgba(255, 255, 255, 0.65);
+    --icon-color: rgba(255, 255, 255, 0.72);
+    --clear-button-color: rgba(255, 255, 255, 0.72);
+    --border-radius: 12px;
+    --box-shadow: none;
+    padding: 0;
+    min-height: 44px;
+  }
+}
+
+.dk-modal-toolbar {
+  --background: var(--dk-surface);
+  --color: var(--dk-ink);
+  border-bottom: 1px solid var(--dk-border);
+
+  ion-title {
+    font-size: clamp(1rem, 0.94rem + 0.3vw, 1.12rem);
+    font-weight: 700;
+  }
+
+  ion-button {
+    min-height: 44px;
+  }
+}
+
+/* Contenedor responsivo centrado para vistas administrativas */
+.dk-page-container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px;
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Superficie de tarjeta única (sin tarjetas anidadas) */
+.dk-card {
+  background: var(--dk-surface);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-lg);
+  box-shadow: var(--dk-shadow-xs);
+}
+
+/* Números tabulares y tipografía monoespaciada para precios y métricas */
+.dk-mono {
+  font-family: var(--dk-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Títulos de sección homogéneos */
+.dk-section-heading {
+  font-family: var(--dk-font-display);
+  font-size: clamp(0.85rem, 0.82rem + 0.18vw, 0.94rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dk-ink-secondary);
+  margin: 20px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Píldoras semánticas reutilizables */
+.dk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: var(--dk-text-xs);
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+
+  &.brand {
+    background: var(--dk-brand-soft);
+    color: var(--dk-brand-hover);
+  }
+
+  &.success {
+    background: var(--dk-success-soft);
+    color: var(--dk-success);
+  }
+
+  &.warning {
+    background: var(--dk-gold-soft);
+    color: var(--dk-gold-ink);
+  }
+
+  &.danger {
+    background: var(--dk-danger-soft);
+    color: var(--dk-danger);
+  }
+
+  &.info {
+    background: var(--dk-info-soft);
+    color: var(--dk-info);
+  }
+
+  &.neutral {
+    background: var(--dk-surface-muted);
+    color: var(--dk-ink-secondary);
+  }
+}
+
+/* Estado vacío consistente */
+.dk-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+  padding: 48px 20px;
+  color: var(--dk-ink-muted);
+
+  ion-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.55;
+  }
+
+  h3 {
+    font-size: var(--dk-text-lg);
+    font-weight: 700;
+    color: var(--dk-ink);
+    margin: 0 0 6px;
+  }
+
+  p {
+    font-size: var(--dk-text-sm);
+    margin: 0;
+    max-width: 320px;
+  }
 }
 
-/* Smooth transitions for all pages */
-ion-router-outlet > * {
-  animation: fadeIn 0.2s ease-in;
+/* Inputs de formulario homogéneos */
+.dk-form-item {
+  --background: var(--dk-surface);
+  --border-radius: 12px;
+  --padding-start: 14px;
+  --padding-end: 14px;
+  border: 1px solid var(--dk-border);
+  border-radius: 12px;
+  margin-bottom: 6px;
+  transition: border-color 0.15s ease;
+
+  &:focus-within {
+    border-color: var(--dk-brand);
+  }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.dk-field-error {
+  color: var(--dk-danger);
+  font-size: var(--dk-text-xs);
+  font-weight: 600;
+  padding: 2px 6px 8px;
 }
 
-/* Hide Cancel button in role action-sheet selector */
+/* Ocultar botón cancelar redundante en action-sheet de roles */
 .role-action-sheet .action-sheet-cancel {
   display: none !important;
 }
 
-/* SweetAlert2 - Symmetrical, Minimalist & Modern */
-@import 'sweetalert2/dist/sweetalert2.min.css';
-
+/* ==========================================================================
+ * SweetAlert2 — Integrado al sistema visual Donde Kike
+ * ========================================================================== */
 .swal2-container {
   z-index: 999999 !important;
-  font-family: var(--ion-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-family: var(--dk-font-sans);
 }
 
-/* Ensure toast notifications NEVER blur or block the background */
 body.swal2-toast-shown .swal2-container {
-  background-color: transparent !important;
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -134,143 +249,112 @@ body.swal2-toast-shown .swal2-popup.swal2-toast {
   pointer-events: auto !important;
 }
 
-/* Modal Popup - Perfectly Symmetrical & Minimalist */
 .swal2-popup {
-  width: 90% !important;
-  max-width: 370px !important;
+  width: 92% !important;
+  max-width: 380px !important;
   padding: 24px 20px 20px !important;
-  border-radius: 20px !important;
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.14), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-  box-sizing: border-box !important;
+  border-radius: 18px !important;
+  background: var(--dk-surface) !important;
+  border: 1px solid var(--dk-border) !important;
+  box-shadow: 0 20px 44px -10px rgba(28, 25, 23, 0.22) !important;
 }
 
 .swal2-icon {
-  width: 50px !important;
-  height: 50px !important;
-  margin: 2px auto 14px !important;
-  border-width: 2.5px !important;
-
-  .swal2-icon-content {
-    font-size: 26px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
+  margin: 4px auto 14px !important;
 }
 
 .swal2-title {
-  font-size: 17px !important;
+  font-family: var(--dk-font-display) !important;
+  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.12rem) !important;
   font-weight: 700 !important;
-  color: #0f172a !important;
-  letter-spacing: -0.015em !important;
+  color: var(--dk-ink) !important;
   padding: 0 !important;
-  margin: 0 0 8px 0 !important;
+  margin: 0 0 8px !important;
   line-height: 1.35 !important;
-  text-align: center !important;
 }
 
 .swal2-html-container {
-  font-size: 13.5px !important;
-  color: #64748b !important;
-  margin: 0 0 18px 0 !important;
+  font-size: var(--dk-text-sm) !important;
+  color: var(--dk-ink-secondary) !important;
+  margin: 0 0 18px !important;
   line-height: 1.45 !important;
-  text-align: center !important;
 }
 
-/* Symmetrical Action Buttons */
 .swal2-actions {
   display: flex !important;
   width: 100% !important;
-  margin: 8px 0 0 0 !important;
+  margin: 8px 0 0 !important;
   gap: 10px !important;
   justify-content: center !important;
 
   button {
     flex: 1 1 0 !important;
-    max-width: 155px !important;
-    min-height: 40px !important;
+    min-height: 44px !important;
     border-radius: 12px !important;
-    font-weight: 600 !important;
-    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    font-size: var(--dk-text-sm) !important;
     padding: 8px 16px !important;
-    letter-spacing: 0.01em !important;
-    transition: all 0.15s ease !important;
     box-shadow: none !important;
-
-    &:active {
-      transform: scale(0.97) !important;
-    }
-  }
-
-  .swal2-confirm {
-    background-color: #10b981 !important;
-    color: #ffffff !important;
   }
 
   .swal2-cancel {
-    background-color: #f1f5f9 !important;
-    color: #475569 !important;
-    border: 1px solid #e2e8f0 !important;
-
-    &:hover {
-      background-color: #e2e8f0 !important;
-      color: #1e293b !important;
-    }
+    background-color: var(--dk-surface-muted) !important;
+    color: var(--dk-ink-secondary) !important;
+    border: 1px solid var(--dk-border) !important;
   }
 }
 
 .swal2-select {
-  font-size: 13.5px !important;
+  font-size: var(--dk-text-sm) !important;
   padding: 8px 12px !important;
   border-radius: 10px !important;
-  border: 1.5px solid #e2e8f0 !important;
-  height: 40px !important;
-  margin: 8px auto 14px auto !important;
+  border: 1.5px solid var(--dk-border) !important;
+  height: 44px !important;
+  margin: 8px auto 14px !important;
   width: 100% !important;
   max-width: 280px !important;
-  color: #1e293b !important;
-  background-color: #f8fafc !important;
-  outline: none !important;
-  transition: border-color 0.2s !important;
-
-  &:focus {
-    border-color: #10b981 !important;
-  }
+  color: var(--dk-ink) !important;
+  background-color: var(--dk-surface-soft) !important;
 }
 
-/* SweetAlert2 Toast - Symmetrical Floating Pill */
 .swal2-popup.swal2-toast {
   width: auto !important;
-  max-width: 320px !important;
-  padding: 10px 16px !important;
-  border-radius: 14px !important;
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.04) !important;
-  display: flex !important;
-  align-items: center !important;
+  max-width: min(360px, calc(100vw - 24px)) !important;
+  padding: 10px 14px !important;
+  border-radius: 12px !important;
+  background: var(--dk-chrome) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 12px 28px rgba(28, 25, 23, 0.28) !important;
 
   .swal2-title {
-    font-size: 13px !important;
+    font-family: var(--dk-font-sans) !important;
+    font-size: 0.84rem !important;
     font-weight: 600 !important;
-    color: #1e293b !important;
-    margin: 0 !important;
-    padding: 0 0 0 8px !important;
+    color: #FFFFFF !important;
+    margin: 0 0 0 8px !important;
+    padding: 0 !important;
     text-align: left !important;
-    line-height: 1.35 !important;
+    line-height: 1.3 !important;
   }
 
   .swal2-icon {
-    width: 22px !important;
-    height: 22px !important;
     margin: 0 !important;
-    flex-shrink: 0 !important;
   }
 
   .swal2-timer-progress-bar {
     height: 3px !important;
-    border-radius: 0 0 14px 14px !important;
+    background: var(--dk-brand) !important;
+  }
+}
+
+/* Accesibilidad de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -9,7 +9,8 @@ export class RoleGuard implements CanActivate {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  canActivate(route: ActivatedRouteSnapshot): boolean | UrlTree {
+  async canActivate(route: ActivatedRouteSnapshot): Promise<boolean | UrlTree> {
+    await this.authService.waitUntilReady();
     const expectedRoles = (route.data?.['roles'] as UserRole[]) || [];
     const userRole = this.authService.userRole;
 

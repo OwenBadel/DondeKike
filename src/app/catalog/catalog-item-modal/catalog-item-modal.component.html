@@ -1,11 +1,11 @@
 <ion-header class="ion-no-border">
-  <ion-toolbar>
+  <ion-toolbar class="dk-modal-toolbar">
     <ion-buttons slot="start">
-      <ion-button (click)="cancel()">
+      <ion-button (click)="cancel()" aria-label="Cerrar">
         <ion-icon name="close" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>{{ mode === 'create' ? 'Nueva Comida' : 'Editar Comida' }}</ion-title>
+    <ion-title>{{ mode === 'create' ? 'Nuevo Producto' : 'Editar Producto' }}</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="save()" [strong]="true" color="primary">
         Guardar
@@ -15,93 +15,101 @@
 </ion-header>
 
 <ion-content class="modal-content">
-  <form [formGroup]="itemForm" class="item-form">
+  <form [formGroup]="itemForm" class="modal-form">
 
     <!-- Imagen -->
     <div class="image-section">
       <div class="image-preview" *ngIf="imagePreview">
-        <img [src]="imagePreview" alt="Preview" />
-        <ion-button fill="clear" size="small" class="remove-image" (click)="removeImage()">
-          <ion-icon name="close-circle" slot="icon-only" color="danger"></ion-icon>
-        </ion-button>
+        <img [src]="imagePreview" alt="Vista previa del producto" />
+        <button type="button" class="remove-image" (click)="removeImage()" aria-label="Quitar imagen">
+          <ion-icon name="close"></ion-icon>
+        </button>
       </div>
       <div class="image-placeholder" *ngIf="!imagePreview">
         <ion-icon name="image-outline"></ion-icon>
-        <span>Sin imagen</span>
+        <span>Sin fotografía</span>
       </div>
-      <div class="image-actions">
-        <label class="upload-btn">
-          <ion-icon name="cloud-upload-outline"></ion-icon>
-          Subir imagen
-          <input type="file" accept="image/*" (change)="onImageSelected($event)" hidden />
-        </label>
+      <label class="upload-btn">
+        <ion-icon name="cloud-upload-outline"></ion-icon>
+        <span>{{ imagePreview ? 'Cambiar imagen' : 'Subir imagen' }}</span>
+        <input type="file" accept="image/*" (change)="onImageSelected($event)" hidden />
+      </label>
+    </div>
+
+    <!-- Datos del plato -->
+    <ion-item lines="none" class="dk-form-item">
+      <ion-label position="stacked">Nombre del producto *</ion-label>
+      <ion-input formControlName="name" placeholder="Ej: Perro Suizo"></ion-input>
+    </ion-item>
+    <div class="dk-field-error" *ngIf="getError('name')">{{ getError('name') }}</div>
+
+    <ion-item lines="none" class="dk-form-item">
+      <ion-label position="stacked">Descripción / Ingredientes *</ion-label>
+      <ion-textarea formControlName="content" placeholder="Describe los ingredientes visibles al cliente" [rows]="3"></ion-textarea>
+    </ion-item>
+    <div class="dk-field-error" *ngIf="getError('content')">{{ getError('content') }}</div>
+
+    <div class="two-cols">
+      <div>
+        <ion-item lines="none" class="dk-form-item">
+          <ion-label position="stacked">Precio ($ COP) *</ion-label>
+          <ion-input formControlName="price" type="number" inputmode="numeric" step="500" placeholder="12000"></ion-input>
+        </ion-item>
+        <div class="dk-field-error" *ngIf="getError('price')">{{ getError('price') }}</div>
+      </div>
+
+      <div>
+        <ion-item lines="none" class="dk-form-item">
+          <ion-label position="stacked">Categoría *</ion-label>
+          <ion-select formControlName="category" interface="action-sheet" placeholder="Seleccionar" cancelText="">
+            <ion-select-option *ngFor="let cat of categories" [value]="cat">{{ cat }}</ion-select-option>
+          </ion-select>
+        </ion-item>
       </div>
     </div>
 
-    <!-- Campos -->
-    <ion-list lines="none" class="form-list">
-      <ion-item class="form-item">
-        <ion-label position="stacked">Nombre de la comida *</ion-label>
-        <ion-input formControlName="name" placeholder="Ej: Hamburguesa Clásica"></ion-input>
-      </ion-item>
-      <div class="field-error" *ngIf="itemForm.get('name')?.touched && itemForm.get('name')?.invalid">
-        {{ getError('name') }}
-      </div>
-
-      <ion-item class="form-item">
-        <ion-label position="stacked">Contenido / Ingredientes *</ion-label>
-        <ion-textarea formControlName="content" placeholder="Describe los ingredientes o contenido" [rows]="3"></ion-textarea>
-      </ion-item>
-      <div class="field-error" *ngIf="itemForm.get('content')?.touched && itemForm.get('content')?.invalid">
-        {{ getError('content') }}
-      </div>
-
-      <ion-item class="form-item">
-        <ion-label position="stacked">Precio ($) *</ion-label>
-        <ion-input formControlName="price" type="number" step="0.01" placeholder="0.00"></ion-input>
-      </ion-item>
-      <div class="field-error" *ngIf="itemForm.get('price')?.touched && itemForm.get('price')?.invalid">
-        {{ getError('price') }}
-      </div>
-
-      <ion-item class="form-item">
-        <ion-label position="stacked">Categoría *</ion-label>
-        <ion-select formControlName="category" interface="action-sheet" placeholder="Seleccionar categoría" cancelText="">
-          <ion-select-option *ngFor="let cat of categories" [value]="cat">{{ cat }}</ion-select-option>
-        </ion-select>
-      </ion-item>
-    </ion-list>
-
     <!-- Receta de insumos -->
-    <h3 class="section-label">Insumos que descuenta</h3>
+    <h3 class="dk-section-heading">Insumos que descuenta al vender</h3>
 
-    <div class="recipe-list" *ngIf="recipe.length > 0">
-      <div class="recipe-item" *ngFor="let r of recipe; let i = index">
-        <div class="recipe-info">
-          <span class="recipe-name">{{ getInsumoName(r.insumoId) }}</span>
-          <span class="recipe-qty">x{{ r.quantity }}</span>
-        </div>
-        <ion-button fill="clear" size="small" color="danger" (click)="removeRecipeItem(i)">
-          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
-        </ion-button>
+    <div class="recipe-list dk-card" *ngIf="recipe.length > 0">
+      <div class="recipe-row" *ngFor="let r of recipe; let i = index">
+        <span class="recipe-name">{{ getInsumoName(r.insumoId) }}</span>
+        <span class="dk-pill brand dk-mono">x{{ r.quantity }}</span>
+        <button type="button" class="recipe-del" (click)="removeRecipeItem(i)" aria-label="Quitar insumo">
+          <ion-icon name="trash-outline"></ion-icon>
+        </button>
       </div>
     </div>
 
     <div class="recipe-empty" *ngIf="recipe.length === 0">
       <ion-icon name="cube-outline"></ion-icon>
-      <span>Sin insumos asignados</span>
+      <span>Sin insumos vinculados a este plato</span>
     </div>
 
     <div class="recipe-add">
-      <ion-item class="form-item recipe-select">
-        <ion-select [(ngModel)]="selectedInsumoId" [ngModelOptions]="{standalone: true}" interface="action-sheet" placeholder="Seleccionar insumo" cancelText="">
+      <ion-item lines="none" class="dk-form-item recipe-select">
+        <ion-select
+          [(ngModel)]="selectedInsumoId"
+          [ngModelOptions]="{ standalone: true }"
+          interface="action-sheet"
+          placeholder="Seleccionar insumo"
+          cancelText="">
           <ion-select-option *ngFor="let ins of availableInsumos" [value]="ins.id">{{ ins.name }}</ion-select-option>
         </ion-select>
       </ion-item>
-      <ion-item class="form-item recipe-qty-input">
-        <ion-input [(ngModel)]="selectedQuantity" [ngModelOptions]="{standalone: true}" type="number" min="1" placeholder="Cant."></ion-input>
+
+      <ion-item lines="none" class="dk-form-item recipe-qty">
+        <ion-input
+          [(ngModel)]="selectedQuantity"
+          [ngModelOptions]="{ standalone: true }"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          placeholder="Cant.">
+        </ion-input>
       </ion-item>
-      <ion-button fill="solid" color="tertiary" size="small" (click)="addRecipeItem()" [disabled]="!selectedInsumoId">
+
+      <ion-button fill="solid" color="primary" class="add-recipe-btn" (click)="addRecipeItem()" [disabled]="!selectedInsumoId">
         <ion-icon name="add" slot="icon-only"></ion-icon>
       </ion-button>
     </div>

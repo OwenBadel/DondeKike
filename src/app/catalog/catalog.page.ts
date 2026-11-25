@@ -1,9 +1,10 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { ModalController } from '@ionic/angular';
-import { Observable, Subject } from 'rxjs';
+import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CatalogItem, CATALOG_CATEGORIES } from '../models/catalog.model';
 import { CatalogService } from '../services/catalog.service';
+import { InventoryService } from '../services/inventory.service';
 import { AlertService } from '../services/alert.service';
 import { CatalogItemModalComponent } from './catalog-item-modal/catalog-item-modal.component';
 
@@ -16,10 +17,10 @@ import { CatalogItemModalComponent } from './catalog-item-modal/catalog-item-mod
 export class CatalogPage implements OnInit, OnDestroy {
 
   private catalogService = inject(CatalogService);
+  private inventoryService = inject(InventoryService);
   private alertService = inject(AlertService);
   private modalCtrl = inject(ModalController);
 
-  items$!: Observable<CatalogItem[]>;
   allItems: CatalogItem[] = [];
   filteredItems: CatalogItem[] = [];
   searchTerm = '';
@@ -29,12 +30,17 @@ export class CatalogPage implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   ngOnInit(): void {
-    this.items$ = this.catalogService.allItems$;
+    this.catalogService.allItems$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(items => {
+        this.allItems = items;
+        this.applyFilters();
+      });
+  }
 
-    this.items$.pipe(takeUntil(this.destroy$)).subscribe(items => {
-      this.allItems = items;
-      this.applyFilters();
-    });
+  ionViewWillEnter(): void {
+    this.catalogService.refresh();
+    this.inventoryService.refresh();
   }
 
   ngOnDestroy(): void {
@@ -52,8 +58,15 @@ export class CatalogPage implements OnInit, OnDestroy {
     const { data } = await modal.onWillDismiss();
 
     if (data?.saved) {
-      await this.catalogService.addItem(data.item);
-      this.alertService.toast(`"${data.item.name}" agregado al menú`, 'success');
+      const created = await this.catalogService.addItem(data.item);
+      if (created) {
+        this.alertService.toast(`"${data.item.name}" agregado al menú`, 'success');
+      } else {
+        if (data.newlyUploadedUrl) {
+          await this.catalogService.deleteImage(data.newlyUploadedUrl);
+        }
+        this.alertService.modal('Error', 'No se pudo agregar el producto al catálogo.', 'error');
+      }
     }
   }
 
@@ -67,21 +80,35 @@ export class CatalogPage implements OnInit, OnDestroy {
     const { data } = await modal.onWillDismiss();
 
     if (data?.saved) {
-      await this.catalogService.updateItem(item.id, data.item);
-      this.alertService.toast(`Producto actualizado`, 'success');
+      const updated = await this.catalogService.updateItem(item.id, data.item);
+      if (updated) {
+        if (data.oldImageToDelete) {
+          await this.catalogService.deleteImage(data.oldImageToDelete);
+        }
+        this.alertService.toast('Producto actualizado', 'success');
+      } else {
+        if (data.newlyUploadedUrl) {
+          await this.catalogService.deleteImage(data.newlyUploadedUrl);
+        }
+        this.alertService.modal('Error', 'No se pudo actualizar el producto.', 'error');
+      }
     }
   }
 
   async confirmDelete(item: CatalogItem): Promise<void> {
     const confirmed = await this.alertService.confirm(
-      '¿Eliminar del Menú?',
-      `¿Desea eliminar "${item.name}" del catálogo?`,
+      '¿Eliminar del menú?',
+      `¿Deseas eliminar "${item.name}" del catálogo?`,
       'Sí, eliminar',
       'Cancelar'
     );
-    if (confirmed) {
-      await this.catalogService.deleteItem(item.id);
-      this.alertService.toast(`Producto eliminado`, 'info');
+    if (!confirmed) return;
+
+    const deleted = await this.catalogService.deleteItem(item.id);
+    if (deleted) {
+      this.alertService.toast('Producto eliminado', 'info');
+    } else {
+      this.alertService.modal('Error', 'No se pudo eliminar el producto.', 'error');
     }
   }
 
@@ -91,8 +118,8 @@ export class CatalogPage implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  onCategoryFilter(event: any): void {
-    this.selectedCategory = event.detail.value || '';
+  setCategory(cat: string): void {
+    this.selectedCategory = this.selectedCategory === cat ? '' : cat;
     this.applyFilters();
   }
 

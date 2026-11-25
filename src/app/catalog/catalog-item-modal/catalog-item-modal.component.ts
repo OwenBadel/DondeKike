@@ -8,6 +8,7 @@ import { CatalogService } from '../../services/catalog.service';
 import { InventoryService } from '../../services/inventory.service';
 import { AlertService } from '../../services/alert.service';
 import { Insumo } from '../../models/product.model';
+import { trimmedMinLength, trimmedRequired, validateImageFile } from '../../utils/form-validators.util';
 
 @Component({
   selector: 'app-catalog-item-modal',
@@ -31,30 +32,32 @@ export class CatalogItemModalComponent implements OnInit, OnDestroy {
   categories = CATALOG_CATEGORIES;
   imagePreview: string | null = null;
   selectedFile: File | null = null;
-  uploading = false;
 
   availableInsumos: Insumo[] = [];
   recipe: InsumoRecipe[] = [];
   selectedInsumoId = '';
   selectedQuantity = 1;
 
+  private originalImageUrl = '';
   private destroy$ = new Subject<void>();
 
   ngOnInit(): void {
+    this.originalImageUrl = this.item?.image ?? '';
+
     this.itemForm = this.fb.group({
-      name: [this.item?.name || '', [Validators.required, Validators.minLength(2)]],
-      content: [this.item?.content || '', [Validators.required]],
-      price: [this.item?.price || 0, [Validators.required, Validators.min(0.01)]],
-      category: [this.item?.category || 'Perros', [Validators.required]],
-      image: [this.item?.image || '']
+      name: [this.item?.name ?? '', [trimmedRequired(), trimmedMinLength(2), Validators.maxLength(80)]],
+      content: [this.item?.content ?? '', [trimmedRequired(), Validators.maxLength(240)]],
+      price: [this.item?.price ?? null, [Validators.required, Validators.min(100)]],
+      category: [this.item?.category ?? 'Perros', [Validators.required]],
+      image: [this.originalImageUrl]
     });
 
-    if (this.item?.image) {
-      this.imagePreview = this.item.image;
+    if (this.originalImageUrl) {
+      this.imagePreview = this.originalImageUrl;
     }
 
     if (this.item?.insumoRecipe) {
-      this.recipe = [...this.item.insumoRecipe];
+      this.recipe = this.item.insumoRecipe.map(r => ({ ...r }));
     }
 
     this.inventoryService.allInsumos$
@@ -71,14 +74,22 @@ export class CatalogItemModalComponent implements OnInit, OnDestroy {
 
   onImageSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      this.selectedFile = input.files[0];
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.imagePreview = reader.result as string;
-      };
-      reader.readAsDataURL(this.selectedFile);
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const check = validateImageFile(file);
+    if (!check.valid) {
+      this.alertService.toast(check.message || 'Imagen no válida', 'warning');
+      input.value = '';
+      return;
     }
+
+    this.selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.imagePreview = reader.result as string;
+    };
+    reader.readAsDataURL(this.selectedFile);
   }
 
   removeImage(): void {
@@ -93,26 +104,40 @@ export class CatalogItemModalComponent implements OnInit, OnDestroy {
       return;
     }
 
+    let newlyUploadedUrl = '';
+
     if (this.selectedFile) {
       const loading = await this.loadingCtrl.create({ message: 'Subiendo imagen...' });
       await loading.present();
       try {
-        if (this.mode === 'edit' && this.item?.image) {
-          await this.catalogService.deleteImage(this.item.image);
-        }
-        const publicUrl = await this.catalogService.uploadImage(this.selectedFile);
-        this.itemForm.patchValue({ image: publicUrl });
-      } catch {
+        newlyUploadedUrl = await this.catalogService.uploadImage(this.selectedFile);
+        this.itemForm.patchValue({ image: newlyUploadedUrl });
+      } catch (err: any) {
         await loading.dismiss();
-        this.alertService.toast('Error al subir imagen', 'error');
+        this.alertService.toast(err?.message || 'Error al subir imagen', 'error');
         return;
       }
       await loading.dismiss();
     }
 
+    const rawVal = this.itemForm.value;
+    const currentImage = rawVal.image || '';
+    const oldImageToDelete =
+      this.mode === 'edit' && this.originalImageUrl && this.originalImageUrl !== currentImage
+        ? this.originalImageUrl
+        : '';
+
     this.modalCtrl.dismiss({
       saved: true,
-      item: { ...this.itemForm.value, insumoRecipe: this.recipe }
+      oldImageToDelete,
+      newlyUploadedUrl,
+      item: {
+        ...rawVal,
+        name: String(rawVal.name || '').trim(),
+        content: String(rawVal.content || '').trim(),
+        price: Math.round(Number(rawVal.price) || 0),
+        insumoRecipe: this.recipe
+      }
     });
   }
 
@@ -122,16 +147,18 @@ export class CatalogItemModalComponent implements OnInit, OnDestroy {
 
   getInsumoName(insumoId: string): string {
     const insumo = this.availableInsumos.find(i => i.id === insumoId);
-    return insumo?.name || 'Desconocido';
+    return insumo?.name || 'Insumo eliminado';
   }
 
   addRecipeItem(): void {
-    if (!this.selectedInsumoId || this.selectedQuantity < 1) return;
+    const qty = Math.floor(Number(this.selectedQuantity) || 0);
+    if (!this.selectedInsumoId || qty < 1) return;
+
     const existing = this.recipe.find(r => r.insumoId === this.selectedInsumoId);
     if (existing) {
-      existing.quantity = this.selectedQuantity;
+      existing.quantity = qty;
     } else {
-      this.recipe.push({ insumoId: this.selectedInsumoId, quantity: this.selectedQuantity });
+      this.recipe.push({ insumoId: this.selectedInsumoId, quantity: qty });
     }
     this.selectedInsumoId = '';
     this.selectedQuantity = 1;
@@ -145,8 +172,9 @@ export class CatalogItemModalComponent implements OnInit, OnDestroy {
     const control = this.itemForm.get(field);
     if (!control?.touched || control.valid) return '';
     if (control.hasError('required')) return 'Campo requerido';
-    if (control.hasError('min')) return `Valor mínimo: ${control.getError('min').min}`;
+    if (control.hasError('min')) return `Valor mínimo: $${control.getError('min').min}`;
     if (control.hasError('minlength')) return `Mínimo ${control.getError('minlength').requiredLength} caracteres`;
+    if (control.hasError('maxlength')) return `Máximo ${control.getError('maxlength').requiredLength} caracteres`;
     return '';
   }
 }

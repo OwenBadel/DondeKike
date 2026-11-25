@@ -1,13 +1,15 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { Observable, Subject } from 'rxjs';
-import { map, takeUntil } from 'rxjs/operators';
+import { takeUntil } from 'rxjs/operators';
 import { CatalogItem, CATALOG_CATEGORIES } from '../models/catalog.model';
 import { CatalogService } from '../services/catalog.service';
 import { CartService, CartItem, CHEESE_EXTRA_PRICE } from '../services/cart.service';
 import { InventoryService } from '../services/inventory.service';
 import { AlertService } from '../services/alert.service';
+import { HapticsService } from '../services/haptics.service';
 import { CheckoutModalComponent } from './checkout-modal/checkout-modal.component';
+import { getCleanProductName } from '../utils/order-format.util';
 
 @Component({
   selector: 'app-pos',
@@ -21,21 +23,19 @@ export class PosPage implements OnInit, OnDestroy {
   private cartService = inject(CartService);
   private inventoryService = inject(InventoryService);
   private alertService = inject(AlertService);
+  private haptics = inject(HapticsService);
   private modalCtrl = inject(ModalController);
 
   allItems: CatalogItem[] = [];
   filteredProducts: CatalogItem[] = [];
   cartItems$!: Observable<CartItem[]>;
   cartTotal$!: Observable<number>;
-  cartSubtotal$!: Observable<number>;
-  cartTax$!: Observable<number>;
   cartCount$!: Observable<number>;
 
   selectedCategory = '';
   searchTerm = '';
   categories = CATALOG_CATEGORIES;
   showCart = false;
-
   cheeseExtraPrice = CHEESE_EXTRA_PRICE;
 
   private destroy$ = new Subject<void>();
@@ -43,8 +43,6 @@ export class PosPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.cartItems$ = this.cartService.items$;
     this.cartTotal$ = this.cartService.total$;
-    this.cartSubtotal$ = this.cartService.subtotal$;
-    this.cartTax$ = this.cartService.tax$;
     this.cartCount$ = this.cartService.itemCount$;
 
     this.catalogService.allItems$
@@ -55,9 +53,31 @@ export class PosPage implements OnInit, OnDestroy {
       });
   }
 
+  ionViewWillEnter(): void {
+    this.catalogService.refresh();
+    this.inventoryService.refresh();
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  getItemCartQty(productId: string): number {
+    return this.cartService.getProductQuantity(productId);
+  }
+
+  getAvailableServings(item: CatalogItem): number | null {
+    return this.inventoryService.getProductMaxServings(item);
+  }
+
+  isOutOfStock(item: CatalogItem): boolean {
+    const servings = this.getAvailableServings(item);
+    return servings !== null && servings <= 0;
+  }
+
+  getCleanName(item: CartItem): string {
+    return getCleanProductName(item);
   }
 
   addToCart(item: CatalogItem): void {
@@ -65,57 +85,79 @@ export class PosPage implements OnInit, OnDestroy {
     const existing = currentItems.find(i => i.productId === item.id && !i.cheeseExtra);
     const newQty = existing ? existing.quantity + 1 : 1;
 
-    let testItems: CartItem[];
-    if (existing) {
-      testItems = currentItems.map(i => i === existing ? { ...i, quantity: newQty } : i);
-    } else {
-      testItems = [...currentItems, {
-        cartItemId: 'test_' + Date.now(),
-        productId: item.id,
-        productName: item.name,
-        quantity: 1,
-        unitPrice: item.price,
-        subtotal: item.price,
-        catalogItem: item
-      }];
-    }
+    const testItems: CartItem[] = existing
+      ? currentItems.map(i => (i === existing ? { ...i, quantity: newQty } : i))
+      : [
+          ...currentItems,
+          {
+            cartItemId: `${item.id}_plain`,
+            productId: item.id,
+            productName: item.name,
+            quantity: 1,
+            unitPrice: item.price,
+            subtotal: item.price,
+            cheeseExtra: false,
+            catalogItem: item
+          }
+        ];
 
     const stockCheck = this.inventoryService.validateCartStock(testItems);
     if (!stockCheck.valid) {
+      this.haptics.warning();
       const missing = stockCheck.missing[0];
-      this.alertService.toast(`⚠️ Stock insuficiente de "${missing.name}" (${missing.available} disponibles)`, 'warning');
+      this.alertService.toast(
+        `Stock insuficiente de ${missing.name} (${missing.available} disp.)`,
+        'warning'
+      );
       return;
     }
 
     this.cartService.addItem(item, 1);
+    this.haptics.tap();
     this.alertService.toast(`+1 ${item.name}`, 'success');
   }
 
   toggleCheese(item: CartItem): void {
-    this.cartService.toggleCheeseExtra(item.cartItemId || item.productId);
-  }
+    if (item.catalogItem.category === 'Bebidas') return;
 
-  removeFromCart(item: CartItem): void {
-    this.cartService.removeItem(item.cartItemId || item.productId);
-  }
+    const key = item.cartItemId || item.productId;
+    const simulated = this.cartService.simulateToggleCheeseExtra(key);
+    const stockCheck = this.inventoryService.validateCartStock(simulated);
 
-  incrementItem(item: CartItem): void {
-    const currentItems = this.cartService.currentItems;
-    const testItems = currentItems.map(i => {
-      if ((i.cartItemId || i.productId) === (item.cartItemId || item.productId)) {
-        return { ...i, quantity: i.quantity + 1 };
-      }
-      return i;
-    });
-
-    const stockCheck = this.inventoryService.validateCartStock(testItems);
     if (!stockCheck.valid) {
+      this.haptics.warning();
       const missing = stockCheck.missing[0];
-      this.alertService.toast(`⚠️ Stock insuficiente de "${missing.name}" (${missing.available} disponibles)`, 'warning');
+      this.alertService.toast(
+        `Stock insuficiente de ${missing.name} (${missing.available} disp.)`,
+        'warning'
+      );
       return;
     }
 
-    this.cartService.updateQuantity(item.cartItemId || item.productId, item.quantity + 1);
+    this.cartService.toggleCheeseExtra(key);
+    this.haptics.tap();
+  }
+
+  incrementItem(item: CartItem): void {
+    const key = item.cartItemId || item.productId;
+    const currentItems = this.cartService.currentItems;
+    const testItems = currentItems.map(i =>
+      (i.cartItemId || i.productId) === key ? { ...i, quantity: i.quantity + 1 } : i
+    );
+
+    const stockCheck = this.inventoryService.validateCartStock(testItems);
+    if (!stockCheck.valid) {
+      this.haptics.warning();
+      const missing = stockCheck.missing[0];
+      this.alertService.toast(
+        `Stock insuficiente de ${missing.name} (${missing.available} disp.)`,
+        'warning'
+      );
+      return;
+    }
+
+    this.cartService.updateQuantity(key, item.quantity + 1);
+    this.haptics.tap();
   }
 
   decrementItem(item: CartItem): void {
@@ -125,14 +167,20 @@ export class PosPage implements OnInit, OnDestroy {
     } else {
       this.cartService.removeItem(key);
     }
+    this.haptics.tap();
   }
 
   async clearCart(): Promise<void> {
     if (this.cartService.isEmpty) return;
-    const confirmed = await this.alertService.confirm('¿Vaciar carrito?', 'Se eliminarán todos los productos seleccionados.', 'Sí, vaciar', 'Cancelar');
+    const confirmed = await this.alertService.confirm(
+      '¿Vaciar orden actual?',
+      'Se eliminarán todos los productos del carrito.',
+      'Sí, vaciar',
+      'Cancelar'
+    );
     if (confirmed) {
       this.cartService.clear();
-      this.alertService.toast('Carrito vaciado', 'info');
+      this.alertService.toast('Orden limpiada', 'info');
     }
   }
 
@@ -142,17 +190,18 @@ export class PosPage implements OnInit, OnDestroy {
 
   async openCheckout(): Promise<void> {
     if (this.cartService.isEmpty) {
-      this.alertService.toast('El carrito está vacío', 'warning');
+      this.alertService.toast('Agrega al menos un producto para cobrar', 'warning');
       return;
     }
 
-    // 1. VALIDACIÓN INMEDIATA DE STOCK EN EL CARRO ANTES DE ABRIR CHECKOUT
     const stockCheck = this.inventoryService.validateCartStock(this.cartService.currentItems);
     if (!stockCheck.valid) {
+      this.haptics.warning();
       await this.alertService.stockWarning(stockCheck.missing);
-      return; // Detiene completamente: no permite cobrar si falta stock
+      return;
     }
 
+    this.haptics.impact();
     const modal = await this.modalCtrl.create({
       component: CheckoutModalComponent
     });
@@ -167,7 +216,7 @@ export class PosPage implements OnInit, OnDestroy {
 
   onSearch(event: Event): void {
     const target = event.target as HTMLIonSearchbarElement;
-    this.searchTerm = target.value?.toLowerCase() || '';
+    this.searchTerm = target.value?.toLowerCase().trim() || '';
     this.applyFilters();
   }
 
@@ -176,10 +225,13 @@ export class PosPage implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  isInCart(productId: string): Observable<boolean> {
-    return this.cartItems$.pipe(
-      map(items => items.some(i => i.productId === productId))
-    );
+  getCategoryIcon(category: string): string {
+    switch (category) {
+      case 'Perros': return 'fast-food-outline';
+      case 'Hamburguesas': return 'restaurant-outline';
+      case 'Bebidas': return 'wine-outline';
+      default: return 'pricetag-outline';
+    }
   }
 
   private applyFilters(): void {

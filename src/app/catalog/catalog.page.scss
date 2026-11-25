@@ -1,56 +1,67 @@
-.catalog-content {
-  --background: #f5f5f5;
-}
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 14px;
+  padding-bottom: 2px;
 
-.category-segment {
-  padding: 8px 16px;
-  background: #fff;
-
-  ion-segment-button {
-    --border-radius: 20px;
-    --indicator-box-shadow: none;
-    --indicator-color: var(--ion-color-tertiary);
-    --color: #555;
-    --color-checked: #fff;
-    --background-checked: var(--ion-color-tertiary);
-    min-width: auto;
-    font-size: 13px;
-    text-transform: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
-.items-list {
+.filter-pill {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--dk-border);
+  background: var(--dk-surface);
+  color: var(--dk-ink-secondary);
+  font-size: var(--dk-text-sm);
+  font-weight: 700;
+  cursor: pointer;
+
+  &.active {
+    background: var(--dk-chrome);
+    border-color: var(--dk-chrome);
+    color: #FFFFFF;
+  }
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.menu-card {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
   padding: 12px;
-  padding-bottom: 80px;
 }
 
-.item-card {
-  border-radius: 16px;
-  margin: 0 0 12px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-
-  .item-content {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px;
-  }
-}
-
-.item-image {
-  width: 64px;
-  height: 64px;
-  min-width: 64px;
+.menu-thumb {
+  width: 74px;
+  height: 74px;
   border-radius: 12px;
-  background: #f0f0f0;
+  background: var(--dk-surface-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  flex-shrink: 0;
+  align-self: center;
 
-  .placeholder-icon {
+  ion-icon {
     font-size: 32px;
-    color: #ccc;
+    color: var(--dk-ink-muted);
+    opacity: 0.55;
   }
 
   img {
@@ -60,21 +71,39 @@
   }
 }
 
-.item-info {
+.menu-body {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 
-  h3 {
-    font-size: 15px;
-    font-weight: 600;
-    margin: 0 0 4px 0;
-    color: #1a1a2e;
+  .menu-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+
+    h3 {
+      margin: 0;
+      font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.05rem);
+      font-weight: 700;
+      color: var(--dk-ink);
+    }
+
+    .menu-price {
+      font-size: clamp(0.96rem, 0.92rem + 0.25vw, 1.08rem);
+      font-weight: 700;
+      color: var(--dk-brand-hover);
+      white-space: nowrap;
+    }
   }
 
-  .item-desc {
-    font-size: 12px;
-    color: #888;
-    margin: 0 0 8px 0;
+  .menu-desc {
+    margin: 0;
+    font-size: var(--dk-text-xs);
+    color: var(--dk-ink-muted);
+    line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -82,47 +111,43 @@
     overflow: hidden;
   }
 
-  .item-meta {
+  .menu-meta {
+    margin-top: auto;
     display: flex;
-    align-items: center;
-    gap: 8px;
-
-    .item-price {
-      font-size: 16px;
-      font-weight: 700;
-      color: #ff6b35;
-    }
+    flex-wrap: wrap;
+    gap: 6px;
   }
 }
 
-.item-actions {
+.menu-actions {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  justify-content: center;
+  gap: 6px;
 
-  ion-button {
-    --padding-start: 4px;
-    --padding-end: 4px;
-  }
-}
+  .action-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--dk-border);
+    background: var(--dk-surface-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
 
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #999;
+    ion-icon {
+      font-size: 19px;
+    }
 
-  ion-icon {
-    font-size: 64px;
-    margin-bottom: 12px;
-  }
+    &.edit {
+      color: var(--dk-ink);
+    }
 
-  h3 {
-    font-size: 18px;
-    margin: 0 0 8px 0;
-  }
-
-  p {
-    font-size: 14px;
-    margin: 0;
+    &.del {
+      color: var(--dk-danger);
+      border-color: var(--dk-danger-border);
+      background: var(--dk-danger-soft);
+    }
   }
 }

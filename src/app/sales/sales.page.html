@@ -1,131 +1,156 @@
 <ion-header class="ion-no-border">
-  <ion-toolbar color="success">
+  <ion-toolbar class="dk-toolbar">
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>Ventas</ion-title>
+    <ion-title>Cierre de Caja y Ventas</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="sales-content">
+  <div class="dk-page-container">
 
-  <!-- Date Navigator -->
-  <div class="date-navigator">
-    <button class="nav-btn" (click)="previousDay()">
-      <ion-icon name="chevron-back-outline"></ion-icon>
-    </button>
-    <div class="date-display" (click)="goToToday()">
-      <span class="date-text">{{ formatDate(selectedDate) }}</span>
-      <span class="today-badge" *ngIf="isToday()">Hoy</span>
-    </div>
-    <button class="nav-btn" (click)="nextDay()">
-      <ion-icon name="chevron-forward-outline"></ion-icon>
-    </button>
-  </div>
-
-  <!-- Revenue & Cierre de Caja Card -->
-  <div class="cierre-card" *ngIf="cashSummary$ | async as cs">
-    <div class="cierre-header">
-      <div class="cierre-title-box">
-        <ion-icon name="wallet-outline"></ion-icon>
-        <span>Arqueo y Cierre de Caja</span>
+    <!-- Navegador de fecha -->
+    <div class="date-nav dk-card">
+      <button type="button" class="nav-btn" (click)="previousDay()" aria-label="Día anterior">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </button>
+      <div class="date-center" (click)="goToToday()">
+        <span class="date-text">{{ formatDate(selectedDate) }}</span>
+        <span class="dk-pill success" *ngIf="isToday()">Jornada actual</span>
+        <span class="dk-pill neutral" *ngIf="!isToday()">Volver a hoy</span>
       </div>
-      <span class="cierre-badge" [class.has-orders]="cs.orderCount > 0">
-        {{ cs.orderCount }} {{ cs.orderCount === 1 ? 'pedido' : 'pedidos' }}
-      </span>
+      <button type="button" class="nav-btn" [disabled]="isToday()" (click)="nextDay()" aria-label="Día siguiente">
+        <ion-icon name="chevron-forward-outline"></ion-icon>
+      </button>
     </div>
 
-    <div class="cierre-main-total">
-      <span class="cierre-lbl">Total Recaudado</span>
-      <span class="cierre-val">${{ cs.totalSales | number:'1.0-0' }}</span>
-    </div>
-
-    <!-- Breakdown Grid (Efectivo y Transferencia) -->
-    <div class="cierre-grid">
-      <div class="grid-item cash">
-        <div class="item-head">
-          <span class="item-icon">💵</span>
-          <span class="item-title">Efectivo en Caja</span>
+    <!-- Arqueo y Cierre de Caja -->
+    <section class="cierre-card dk-card" *ngIf="cashSummary$ | async as cs">
+      <div class="cierre-head">
+        <div class="cierre-title">
+          <ion-icon name="wallet-outline"></ion-icon>
+          <span>Arqueo del Día</span>
         </div>
-        <span class="item-value">${{ cs.efectivo | number:'1.0-0' }}</span>
-        <span class="item-hint">Dinero físico a contar</span>
+        <span class="dk-pill dk-mono" [class.success]="cs.orderCount > 0" [class.neutral]="cs.orderCount === 0">
+          {{ cs.orderCount }} {{ cs.orderCount === 1 ? 'venta' : 'ventas' }}
+        </span>
       </div>
 
-      <div class="grid-item trans">
-        <div class="item-head">
-          <span class="item-icon">📲</span>
-          <span class="item-title">Transferencias</span>
+      <div class="cierre-banner">
+        <div class="banner-stat">
+          <span>Total Recaudado</span>
+          <strong class="dk-mono">${{ cs.totalSales | number:'1.0-0' }}</strong>
         </div>
-        <span class="item-value">${{ cs.transferencia | number:'1.0-0' }}</span>
-        <span class="item-hint">Bancos / Apps</span>
+        <div class="banner-stat right">
+          <span>Ticket Promedio</span>
+          <strong class="dk-mono small">${{ cs.averageTicket | number:'1.0-0' }}</strong>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Sales Chart -->
-  <div class="chart-section">
-    <h3 class="section-title">Comparación de Ventas</h3>
-    <div class="chart-container">
-      <canvas #salesChart></canvas>
-    </div>
-  </div>
-
-  <!-- Day Orders Detail -->
-  <div class="day-orders" *ngIf="dayOrders$ | async as orders">
-    <h3 class="section-title" *ngIf="orders.length > 0">Detalle de Ventas</h3>
-
-    <div class="order-card" *ngFor="let order of orders">
-      <div class="order-header">
-        <div class="order-id-tags">
-          <span class="order-number">#{{ order.orderNumber }}</span>
-          <span class="badge-type" *ngIf="order.orderType">
-            {{ order.orderType === 'Para Llevar' ? '🥡 Para Llevar' : '🍽️ Comer Aquí' }}
+      <div class="payment-split">
+        <div class="pay-box cash">
+          <div class="pay-head">
+            <ion-icon name="cash-outline"></ion-icon>
+            <span>Efectivo en Caja</span>
+          </div>
+          <strong class="pay-val dk-mono">${{ cs.efectivo | number:'1.0-0' }}</strong>
+          <span class="pay-sub">
+            {{ cs.efectivoCount }} {{ cs.efectivoCount === 1 ? 'pedido' : 'pedidos' }} · {{ getSharePercent(cs.efectivo, cs.totalSales) }}%
           </span>
-          <span class="badge-pay" *ngIf="order.paymentMethod">{{ order.paymentMethod }}</span>
         </div>
-        <span class="order-time">{{ order.createdAt | date:'h:mm a' }}</span>
+
+        <div class="pay-box trans">
+          <div class="pay-head">
+            <ion-icon name="phone-portrait-outline"></ion-icon>
+            <span>Transferencias</span>
+          </div>
+          <strong class="pay-val dk-mono">${{ cs.transferencia | number:'1.0-0' }}</strong>
+          <span class="pay-sub">
+            {{ cs.transferenciaCount }} {{ cs.transferenciaCount === 1 ? 'pedido' : 'pedidos' }} · {{ getSharePercent(cs.transferencia, cs.totalSales) }}%
+          </span>
+        </div>
       </div>
-      <div class="order-items">
-        <div class="order-item" *ngFor="let item of order.items">
-          <span class="item-qty">{{ item.quantity }}x</span>
-          <span class="item-name">{{ item.productName }}<span class="cheese-tag" *ngIf="item.cheeseExtra"> +Queso</span></span>
-          <span class="item-price">${{ item.subtotal | number:'1.0-0' }}</span>
-        </div>
+    </section>
+
+    <!-- Gráfica tendencia -->
+    <h2 class="dk-section-heading">Tendencia de Ventas (Últimos 14 días)</h2>
+    <div class="chart-card dk-card">
+      <div class="chart-wrap" *ngIf="hasChartData">
+        <canvas #salesChart></canvas>
       </div>
-      <div class="order-footer">
-        <div class="footer-customer">
-          <span class="order-customer">{{ (order.customerName && order.customerName.toLowerCase() !== 'sin nombre') ? order.customerName : 'Cliente Mostrador' }}</span>
-          <span class="order-notes-tag" *ngIf="order.notes">{{ order.notes }}</span>
-        </div>
-        <span class="order-total">${{ order.total | number:'1.0-0' }}</span>
+      <div class="dk-empty-state compact" *ngIf="!hasChartData">
+        <ion-icon name="analytics-outline"></ion-icon>
+        <p>Aún no hay ventas completadas para graficar.</p>
       </div>
     </div>
 
-    <!-- Empty state -->
-    <div class="empty-state" *ngIf="orders.length === 0">
-      <ion-icon name="receipt-outline"></ion-icon>
-      <p>No hay ventas este día</p>
-    </div>
+    <!-- Detalle de ventas del día -->
+    <section *ngIf="dayOrders$ | async as orders">
+      <h2 class="dk-section-heading">Detalle de Ventas ({{ orders.length }})</h2>
+
+      <div class="orders-grid" *ngIf="orders.length > 0">
+        <article class="sale-card dk-card" *ngFor="let order of orders">
+          <div class="sale-head">
+            <div class="sale-tags">
+              <span class="sale-num dk-mono">#{{ order.orderNumber }}</span>
+              <span class="dk-pill info">{{ order.orderType }}</span>
+              <span class="dk-pill neutral">{{ order.paymentMethod }}</span>
+            </div>
+            <span class="sale-time dk-mono">{{ order.createdAt | date:'h:mm a' }}</span>
+          </div>
+
+          <div class="sale-items">
+            <div class="sale-item" *ngFor="let item of order.items">
+              <span class="qty dk-mono">{{ item.quantity }}x</span>
+              <span class="name">
+                {{ getCleanName(item) }}
+                <span class="dk-pill warning" *ngIf="item.cheeseExtra">+ Queso</span>
+              </span>
+              <span class="price dk-mono">${{ item.subtotal | number:'1.0-0' }}</span>
+            </div>
+          </div>
+
+          <div class="sale-foot">
+            <div class="foot-meta">
+              <strong>{{ order.customerName }}</strong>
+              <span *ngIf="order.cleanNotes">{{ order.cleanNotes }}</span>
+            </div>
+            <strong class="sale-total dk-mono">${{ order.total | number:'1.0-0' }}</strong>
+          </div>
+        </article>
+      </div>
+
+      <div class="dk-empty-state dk-card" *ngIf="orders.length === 0">
+        <ion-icon name="receipt-outline"></ion-icon>
+        <h3>Sin ventas registradas</h3>
+        <p>No se registraron pedidos despachados en esta fecha.</p>
+      </div>
+    </section>
+
+    <!-- Historial por día -->
+    <section *ngIf="salesSummary$ | async as summary">
+      <ng-container *ngIf="summary.length > 0">
+        <h2 class="dk-section-heading">Historial por Jornada</h2>
+        <div class="history-grid">
+          <button
+            type="button"
+            class="history-row dk-card"
+            *ngFor="let day of summary"
+            [class.selected]="isSelectedDate(day.date)"
+            (click)="selectDay(day.date)">
+            <div class="hist-left">
+              <span class="hist-dow">{{ formatDayName(day.date) }}</span>
+              <strong>{{ formatDateShort(day.date) }}</strong>
+            </div>
+            <div class="hist-right">
+              <span>{{ day.count }} {{ day.count === 1 ? 'venta' : 'ventas' }}</span>
+              <strong class="dk-mono">${{ day.total | number:'1.0-0' }}</strong>
+            </div>
+          </button>
+        </div>
+      </ng-container>
+    </section>
+
   </div>
-
-  <!-- Historical Summary -->
-  <div class="history-section" *ngIf="salesSummary$ | async as summary">
-    <h3 class="section-title" *ngIf="summary.length > 0">Historial por Día</h3>
-    <div class="history-list">
-      <div class="history-item"
-           *ngFor="let day of summary"
-           [class.selected]="isSelectedDate(day.date)"
-           (click)="selectDay(day.date)">
-        <div class="history-date">
-          <span class="history-day-name">{{ formatDayName(day.date) }}</span>
-          <span class="history-day-number">{{ formatDateShort(day.date) }}</span>
-        </div>
-        <div class="history-stats">
-          <span class="history-count">{{ day.count }} {{ day.count === 1 ? 'venta' : 'ventas' }}</span>
-          <span class="history-total">${{ day.total | number:'1.0-0' }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </ion-content>

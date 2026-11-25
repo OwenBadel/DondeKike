@@ -1,96 +1,180 @@
-.inventory-content {
-  --background: #f5f5f5;
-}
-
-.low-stock-banner {
+.summary-filters {
   display: flex;
-  align-items: center;
   gap: 8px;
-  background: #fff3cd;
-  color: #856404;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
+  overflow-x: auto;
+  margin-bottom: 14px;
+  padding-bottom: 2px;
 
-  ion-icon {
-    font-size: 20px;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
-.products-list {
-  padding: 12px;
-  padding-bottom: 80px;
-}
+.filter-pill {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--dk-border);
+  background: var(--dk-surface);
+  color: var(--dk-ink-secondary);
+  font-size: var(--dk-text-sm);
+  font-weight: 700;
+  cursor: pointer;
 
-.product-card {
-  border-radius: 16px;
-  margin: 0 0 12px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-
-  &.low-stock {
-    border-left: 4px solid #ffc409;
+  &.active {
+    background: var(--dk-chrome);
+    border-color: var(--dk-chrome);
+    color: #FFFFFF;
   }
 
-  .product-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
+  &.warn.active {
+    background: var(--dk-gold);
+    border-color: var(--dk-gold);
+  }
+
+  &.crit.active {
+    background: var(--dk-danger);
+    border-color: var(--dk-danger);
   }
 }
 
-.product-info {
-  flex: 1;
+.insumos-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.insumo-card {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 4px solid var(--dk-success);
+
+  &.is-low {
+    border-left-color: var(--dk-gold);
+  }
+
+  &.is-out {
+    border-left-color: var(--dk-danger);
+  }
+}
+
+.insumo-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.insumo-info {
   min-width: 0;
 
   h3 {
-    font-size: 15px;
-    font-weight: 600;
-    margin: 0 0 6px 0;
-    color: #1a1a2e;
+    margin: 0 0 6px;
+    font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.05rem);
+    font-weight: 700;
+    color: var(--dk-ink);
   }
 
-  .stock-row {
+  .insumo-badges {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
 
-    .stock-threshold {
-      font-size: 11px;
-      color: #999;
+    .threshold-lbl {
+      font-size: var(--dk-text-xs);
+      color: var(--dk-ink-muted);
+      font-weight: 600;
     }
   }
 }
 
-.product-actions {
+.insumo-crud {
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  gap: 6px;
+  flex-shrink: 0;
 
-  ion-button {
-    --padding-start: 4px;
-    --padding-end: 4px;
+  .crud-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--dk-border);
+    background: var(--dk-surface-soft);
+    color: var(--dk-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &.del {
+      color: var(--dk-danger);
+      background: var(--dk-danger-soft);
+      border-color: var(--dk-danger-border);
+    }
+
+    ion-icon {
+      font-size: 18px;
+    }
   }
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 24px;
-  color: #999;
+.quick-restock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--dk-border);
 
-  ion-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
+  .restock-lbl {
+    font-size: var(--dk-text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--dk-ink-muted);
   }
 
-  h3 {
-    font-size: 18px;
-    margin: 0 0 8px 0;
-    color: #666;
-  }
+  .restock-btns {
+    display: flex;
+    gap: 6px;
 
-  p {
-    font-size: 14px;
-    margin: 0;
+    .adj-btn {
+      min-width: 44px;
+      min-height: 38px;
+      border-radius: 9px;
+      border: 1px solid var(--dk-border);
+      font-size: var(--dk-text-sm);
+      font-weight: 700;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      &.minus {
+        background: var(--dk-surface-soft);
+        color: var(--dk-danger);
+      }
+
+      &.plus {
+        background: var(--dk-success-soft);
+        border-color: var(--dk-success-border);
+        color: var(--dk-success);
+      }
+
+      &.plus-lg {
+        background: var(--dk-success);
+        border-color: var(--dk-success);
+        color: #FFFFFF;
+      }
+    }
   }
 }

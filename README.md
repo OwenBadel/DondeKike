@@ -1,129 +1,91 @@
-# 🍔 Donde Kike POS & Comandas Móviles
+# Donde Kike POS — La Esquina del Sabor
 
-> **Sistema Híbrido de Punto de Venta (POS), Comandas en Tiempo Real y Control de Inventarios para Restaurantes y Comidas Rápidas.**  
-> *Desarrollado bajo la titularidad y autoría de **Owen Badel Hooker** — Ingeniero de Sistemas.*
+Sistema de punto de venta (POS), monitor de cocina en tiempo real (KDS), control de inventario y cierre de caja para **Donde Kike**. Desarrollado por **Owen Badel Hooker** (Ingeniero de Sistemas).
 
-[![Author](https://img.shields.io/badge/Autor-Owen%20Badel%20Hooker-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/owen-badel-175851371/)
-[![Framework](https://img.shields.io/badge/Angular-20-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.dev/)
-[![Mobile](https://img.shields.io/badge/Ionic%208-Capacitor%208-3880FF?style=for-the-badge&logo=ionic&logoColor=white)](https://ionicframework.com/)
-[![Database](https://img.shields.io/badge/Supabase-Realtime%20PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-[![Platform](https://img.shields.io/badge/Plataforma-Android%20%7C%20Web%20PWA-green?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
+[![Angular](https://img.shields.io/badge/Angular-20-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.dev/)
+[![Ionic](https://img.shields.io/badge/Ionic%208-Capacitor%208-D9480F?style=for-the-badge&logo=ionic&logoColor=white)](https://ionicframework.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%20Realtime-15803D?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
 ---
 
-## 📌 Descripción del Sistema
+## Qué resuelve la aplicación
 
-**Donde Kike POS** es una solución integral de ingeniería de software diseñada para optimizar los flujos operativos y de atención en establecimientos gastronómicos y restaurantes de comida rápida. Combina una aplicación móvil táctil para camareros y personal de salón, una pantalla operativa de comandas sincronizada en tiempo real con cocina, y un panel administrativo para caja, ventas e inventario.
+**Donde Kike POS** centraliza la operación diaria de un restaurante de comida rápida en una interfaz móvil y de escritorio:
 
-El sistema fue concebido como una solución híbrida (Cross-Platform) capaz de compilarse nativamente para dispositivos móviles **Android** mediante **Capacitor 8**, o desplegarse como una **Aplicación Web Progresiva (PWA)** de alto rendimiento.
+- **Terminal POS (Maestro-Detalle):** catálogo categorizado, búsqueda instantánea, validación de stock por receta antes de agregar al pedido, adición de queso extra y modal de cobro con cálculo de cambio en efectivo o transferencia.
+- **Monitor de Cocina (KDS):** tablero oscuro de alto contraste sincronizado por WebSockets (Supabase Realtime) con temporizador por comanda, niveles de urgencia, notas limpias de preparación y alertas sonoras silenciables.
+- **Inventario por Recetas:** control de insumos vinculados a cada plato con descuento automático en transacciones atómicas, alertas de stock mínimo y botones de reabastecimiento rápido (`-1`, `+1`, `+5`).
+- **Historial y Cierre de Caja:** consulta filtrable de pedidos y comprobantes, arqueo diario discriminado entre efectivo y transferencias, ticket promedio y gráfica de tendencia de los últimos 14 días.
+- **Control de Acceso por Rol (RBAC):** ingreso por usuario y PIN de 4 dígitos con hash `pgcrypto` en PostgreSQL y vistas diferenciadas para *Administrador*, *Mesero / Caja* y *Cocina*.
 
 ---
 
-## 🏛️ Arquitectura & Tecnologías
+## Arquitectura
 
 ```mermaid
 graph TD
-    subgraph Clientes ["📱 Clientes Híbridos (Móvil / Web)"]
-        POS["🛒 Terminal POS / Mesero (Ionic 8 + Angular 20)"]
-        Cocina["🍳 Pantalla de Cocina KDS (Realtime RxJS)"]
-        Admin["📊 Panel Admin / Caja (Gestión & Ventas)"]
+    subgraph Clientes ["Clientes Web / Android (Ionic 8 + Angular 20)"]
+        POS["Terminal POS y Checkout"]
+        KDS["Monitor de Cocina KDS"]
+        ADMIN["Panel Admin, Inventario y Caja"]
     end
 
-    subgraph Runtime ["⚡ Runtime & Hardware"]
-        Capacitor["Capacitor 8 Engine (Android Native APIs)"]
-        Haptics["Vibración / Haptics & Notificaciones"]
+    subgraph Runtime ["Capacitor 8"]
+        CAP["Plugins Nativos: Haptics, SplashScreen, Keyboard, App"]
     end
 
-    subgraph Backend ["☁️ Cloud & Persistencia"]
-        Supabase["Supabase Cloud (PostgreSQL 15)"]
-        Realtime["Canales WebSockets Realtime"]
-        Auth["Supabase Auth & RLS Security"]
+    subgraph Backend ["Supabase (PostgreSQL + Realtime)"]
+        RPC["Funciones RPC Atómicas (verify_user_pin, create_order_atomic, cancel_order_atomic)"]
+        DB["Tablas: users, catalog_items, insumos, orders, invoices"]
+        RT["Publicación Realtime (orders, insumos, catalog_items)"]
     end
 
-    POS --> Capacitor
-    Capacitor --> Haptics
-    POS -->|Órdenes / Checkout| Supabase
-    Supabase -->|Eventos Realtime| Realtime
-    Realtime -->|Sincronización Inmediata| Cocina
-    Admin -->|Auditoría & Kardex| Supabase
+    POS --> CAP
+    POS --> RPC
+    ADMIN --> DB
+    RPC --> DB
+    DB --> RT
+    RT --> KDS
 ```
 
-* **Frontend:** Angular 20 Standalone Components, Ionic Framework 8, SCSS Theming modular y RxJS para manejo reactivo del estado.
-* **Móvil Nativo:** Capacitor 8 con plugins de hardware para Android (`@capacitor/haptics`, `@capacitor/camera`, `@capacitor/filesystem`).
-* **Backend & Base de Datos:** Supabase (PostgreSQL 15) con suscripciones en tiempo real mediante WebSockets y Row-Level Security (RLS).
-* **Auditoría & Facturación:** Esquema relacional estricto con soporte para comandas, estados de preparación, historial de transacciones y cálculo automático de totales.
-
 ---
 
-## 🚀 Módulos Funcionales
-
-1. **Terminal POS & Cobro Rápido:**
-   - Selección táctil y categorizada del menú (hamburguesas, perros calientes, bebidas, combos).
-   - Carrito reactivo con cálculo inmediato de subtotal, impuestos y descuentos.
-   - Modal de checkout con selección de medio de pago y generación de comprobante.
-
-2. **KDS de Cocina en Tiempo Real (Kitchen Display System):**
-   - Recepción instantánea de órdenes sin necesidad de refrescar la pantalla.
-   - Cambio de estado de preparación (*Pendiente*, *En Preparación*, *Listo para Servir*, *Entregado*).
-   - Tiempos de preparación y alertas visuales de pedidos demorados.
-
-3. **Control de Inventarios & Stock:**
-   - Registro de productos, categorías, precios de venta y costos unitarios.
-   - Control de existencias con alertas visuales de agotamiento o stock mínimo.
-
-4. **Dashboard Administrativo & Reportes:**
-   - Métricas de ventas diarias, productos más vendidos y promedio por ticket.
-   - Registro histórico de facturas y auditoría de pedidos.
-
-5. **Control de Acceso Basado en Roles (RBAC):**
-   - Perfiles de usuario: *Administrador*, *Cajero*, *Mesero* y *Cocinero*.
-   - Guards de navegación para protección estricta de rutas y vistas.
-
----
-
-## 🛠️ Instalación y Puesta en Marcha
+## Instalación y ejecución local
 
 ### Prerrequisitos
-* **Node.js:** Versión 18.x o 20.x LTS.
-* **Angular CLI:** `npm install -g @angular/cli`.
-* **Ionic CLI:** `npm install -g @ionic/cli`.
-* **Android Studio:** (Opcional, para compilación de APK en Android).
+- Node.js 20 LTS o superior
+- Angular CLI (`@angular/cli`)
+- Proyecto configurado en Supabase con el esquema de [supabase-schema.sql](supabase-schema.sql)
 
-### 1. Clonar e Instalar Dependencias
+### Pasos
+
 ```bash
 git clone https://github.com/OwenBadel/DondeKike.git
 cd DondeKike
 npm install
 ```
 
-### 2. Configurar Entorno
-Editar las credenciales de Supabase en `src/environments/environment.ts`:
-```typescript
-export const environment = {
-  production: false,
-  supabaseUrl: 'TU_SUPABASE_URL',
-  supabaseAnonKey: 'TU_SUPABASE_ANON_KEY'
-};
-```
+Configurar `src/environments/environment.ts` y `src/environments/environment.prod.ts` con la URL y la clave pública (`anon key`) del proyecto Supabase.
 
-### 3. Ejecutar en Modo Desarrollo (Navegador)
 ```bash
-ionic serve
-```
+# Servidor local de desarrollo
+npm start
 
-### 4. Compilar y Ejecutar en Android
-```bash
-ionic build
-npx cap sync android
-npx cap open android
+# Compilación de producción
+npm run build:prod
+
+# Validación de estilo y pruebas unitarias
+npm run lint
+npm run test:ci
+
+# Sincronización con Android (Capacitor)
+npm run sync
 ```
 
 ---
 
-## 👨‍💻 Autoría y Créditos
+## Autoría y contacto
 
-* **Ingeniero Titular y Diseñador de Software:** Owen Badel Hooker
-* **Formación:** Ingeniería de Sistemas — Fundación Universitaria Colombo Internacional (Unicolombo)
-* **GitHub:** [@OwenBadel](https://github.com/OwenBadel)
-* **LinkedIn:** [linkedin.com/in/owen-badel-175851371](https://www.linkedin.com/in/owen-badel-175851371/)
-* **Contacto Directo:** [+57 301 645 0065](https://wa.me/573016450065)
+- **Owen Badel Hooker** — Ingeniero de Sistemas
+- **GitHub:** [@OwenBadel](https://github.com/OwenBadel)
+- **LinkedIn:** [linkedin.com/in/owen-badel-175851371](https://www.linkedin.com/in/owen-badel-175851371/)

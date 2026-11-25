@@ -1,114 +1,174 @@
 <ion-header class="ion-no-border">
-  <ion-toolbar color="success">
+  <ion-toolbar class="dk-toolbar">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+      <ion-back-button *ngIf="!selectedOrder" defaultHref="/dashboard" text=""></ion-back-button>
+      <ion-button *ngIf="selectedOrder" (click)="closeDetails()" aria-label="Volver al listado">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
     </ion-buttons>
-    <ion-title>{{ showInvoices ? 'Historial / Facturas' : 'Historial de Pedidos' }}</ion-title>
+    <ion-title>
+      {{ selectedOrder ? 'Pedido #' + selectedOrder.orderNumber : (showInvoices ? 'Historial y Comprobantes' : 'Historial de Pedidos') }}
+    </ion-title>
+  </ion-toolbar>
+  <ion-toolbar class="dk-sub-toolbar" *ngIf="!selectedOrder">
+    <ion-searchbar
+      placeholder="Buscar por #, cliente o producto..."
+      (ionInput)="onSearch($event)"
+      [debounce]="200">
+    </ion-searchbar>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="orders-content">
-  <ng-container *ngIf="orders$ | async as orders">
-    <ion-list lines="none" class="orders-list" *ngIf="!selectedOrder">
-      <ion-item *ngFor="let order of orders" class="order-item" (click)="viewDetails(order)" button>
-        <div class="order-number" slot="start">
-          <span>#{{ order.orderNumber }}</span>
-        </div>
-        <ion-label>
-          <h3>{{ order.customerName || 'Cliente Mostrador' }}</h3>
-          <p>{{ order.items.length }} items - {{ order.createdAt | date:'dd/MM/yyyy h:mm a' }}</p>
-          <div class="order-sub-tags">
-            <span class="tag-type">{{ order.orderType === 'Para Llevar' ? '🥡 Para Llevar' : '🍽️ Comer Aquí' }}</span>
-            <span class="tag-pay">{{ order.paymentMethod }}</span>
+
+  <!-- Listado -->
+  <div class="dk-page-container" *ngIf="!selectedOrder">
+    <div class="filter-bar">
+      <button type="button" class="filter-pill" [class.active]="statusFilter === 'all'" (click)="setFilter('all')">Todos</button>
+      <button type="button" class="filter-pill" [class.active]="statusFilter === 'active'" (click)="setFilter('active')">Activos</button>
+      <button type="button" class="filter-pill" [class.active]="statusFilter === 'completed'" (click)="setFilter('completed')">Completados</button>
+      <button type="button" class="filter-pill" [class.active]="statusFilter === 'voided'" (click)="setFilter('voided')">Cancelados</button>
+    </div>
+
+    <div class="orders-list" *ngIf="filteredOrders.length > 0">
+      <button type="button" class="order-row dk-card" *ngFor="let order of filteredOrders" (click)="viewDetails(order)">
+        <div class="row-num dk-mono">#{{ order.orderNumber }}</div>
+
+        <div class="row-body">
+          <div class="row-top">
+            <strong>{{ order.customerName }}</strong>
+            <span class="dk-pill" [ngClass]="getStatusClass(order.status)">
+              {{ getStatusLabel(order.status) }}
+            </span>
           </div>
-        </ion-label>
-        <div slot="end" class="order-end">
-          <ion-badge [color]="getStatusColor(order.status)">
-            {{ getStatusLabel(order.status) }}
-          </ion-badge>
-          <span class="order-total">${{ order.total | number:'1.0-0' }}</span>
+          <p class="row-sub">
+            {{ order.items.length }} {{ order.items.length === 1 ? 'producto' : 'productos' }} · {{ order.createdAt | date:'dd/MM/yyyy h:mm a' }}
+          </p>
+          <div class="row-tags">
+            <span class="dk-pill info">
+              {{ order.orderType }}<ng-container *ngIf="order.tableNumber"> · {{ order.tableNumber }}</ng-container>
+            </span>
+            <span class="dk-pill neutral">{{ order.paymentMethod }}</span>
+          </div>
         </div>
-      </ion-item>
-    </ion-list>
 
-    <div class="empty-state" *ngIf="orders.length === 0 && !selectedOrder">
+        <div class="row-end">
+          <strong class="row-total dk-mono">${{ order.total | number:'1.0-0' }}</strong>
+          <ion-icon name="chevron-forward-outline"></ion-icon>
+        </div>
+      </button>
+    </div>
+
+    <div class="dk-empty-state" *ngIf="filteredOrders.length === 0">
       <ion-icon name="receipt-outline"></ion-icon>
-      <h3>Sin pedidos</h3>
-      <p>Los pedidos aparecerán aquí</p>
+      <h3>Sin pedidos encontrados</h3>
+      <p>No hay órdenes que coincidan con el filtro seleccionado.</p>
     </div>
-  </ng-container>
+  </div>
 
-  <!-- Detalle del pedido -->
-  <div class="order-detail" *ngIf="selectedOrder">
-    <div class="detail-header">
-      <ion-button fill="clear" (click)="closeDetails()">
-        <ion-icon name="arrow-back" slot="start"></ion-icon>
-        Volver
-      </ion-button>
-      <h2>Pedido #{{ selectedOrder.orderNumber }}</h2>
-      <ion-badge [color]="getStatusColor(selectedOrder.status)" class="detail-badge">
-        {{ getStatusLabel(selectedOrder.status) }}
-      </ion-badge>
+  <!-- Detalle de pedido -->
+  <div class="dk-page-container detail-wrap" *ngIf="selectedOrder">
+    <div class="detail-hero dk-card">
+      <div class="detail-hero-top">
+        <div>
+          <span class="detail-eyebrow">Comanda registrada</span>
+          <h2 class="dk-mono">Pedido #{{ selectedOrder.orderNumber }}</h2>
+        </div>
+        <span class="dk-pill" [ngClass]="getStatusClass(selectedOrder.status)">
+          {{ getStatusLabel(selectedOrder.status) }}
+        </span>
+      </div>
+
+      <div class="info-list">
+        <div class="info-row">
+          <span>Cliente</span>
+          <strong>{{ selectedOrder.customerName }}</strong>
+        </div>
+        <div class="info-row">
+          <span>Modalidad</span>
+          <strong>
+            {{ selectedOrder.orderType }}<ng-container *ngIf="selectedOrder.tableNumber"> · {{ selectedOrder.tableNumber }}</ng-container>
+          </strong>
+        </div>
+        <div class="info-row">
+          <span>Método de pago</span>
+          <strong>{{ selectedOrder.paymentMethod }}</strong>
+        </div>
+        <div class="info-row" *ngIf="selectedOrder.paymentMethod === 'Efectivo' && (selectedOrder.cashReceived || 0) > 0">
+          <span>Efectivo / Cambio</span>
+          <strong class="dk-mono">
+            ${{ selectedOrder.cashReceived | number:'1.0-0' }} / ${{ (selectedOrder.cashChange || 0) | number:'1.0-0' }}
+          </strong>
+        </div>
+        <div class="info-row">
+          <span>Fecha y hora</span>
+          <strong class="dk-mono">{{ selectedOrder.createdAt | date:'dd/MM/yyyy h:mm a' }}</strong>
+        </div>
+        <div class="info-row" *ngIf="selectedOrder.completedAt">
+          <span>Despachado</span>
+          <strong class="dk-mono">{{ selectedOrder.completedAt | date:'dd/MM/yyyy h:mm a' }}</strong>
+        </div>
+        <div class="info-row" *ngIf="selectedOrder.createdBy">
+          <span>Atendido por</span>
+          <strong>{{ selectedOrder.createdBy }}</strong>
+        </div>
+      </div>
     </div>
 
-    <div class="detail-card">
-      <h4>Información</h4>
-      <div class="info-row">
-        <span>Cliente:</span>
-        <span style="font-weight: 700;">{{ selectedOrder.customerName || 'Cliente Mostrador' }}</span>
-      </div>
-      <div class="info-row">
-        <span>Despacho y Pago:</span>
-        <span>{{ selectedOrder.orderType === 'Para Llevar' ? '🥡 Para Llevar' : '🍽️ Comer Aquí' }} ({{ selectedOrder.paymentMethod }})</span>
-      </div>
-      <div class="info-row">
-        <span>Fecha:</span>
-        <span>{{ selectedOrder.createdAt | date:'dd/MM/yyyy h:mm a' }}</span>
-      </div>
-      <div class="info-row" *ngIf="selectedOrder.completedAt">
-        <span>Completado:</span>
-        <span>{{ selectedOrder.completedAt | date:'dd/MM/yyyy h:mm a' }}</span>
-      </div>
-      <div class="info-row">
-        <span>Atendido por:</span>
-        <span>{{ selectedOrder.createdBy }}</span>
-      </div>
-    </div>
-
-    <div class="detail-card">
-      <h4>Productos</h4>
+    <div class="detail-section dk-card">
+      <h3 class="card-title">Productos</h3>
       <div class="detail-item" *ngFor="let item of selectedOrder.items">
-        <span class="item-qty">{{ item.quantity }}x</span>
-        <span class="item-name">{{ item.productName }}<span *ngIf="item.cheeseExtra" style="color: #f7931e; font-weight: 600;"> +Queso</span></span>
-        <span class="item-price">${{ item.subtotal | number:'1.0-0' }}</span>
+        <span class="item-qty dk-mono">{{ item.quantity }}x</span>
+        <span class="item-name">
+          {{ getCleanName(item) }}
+          <span class="dk-pill warning" *ngIf="item.cheeseExtra">+ Queso</span>
+        </span>
+        <span class="item-price dk-mono">${{ item.subtotal | number:'1.0-0' }}</span>
       </div>
-      <div class="detail-totals">
-        <div class="total-row total"><span>Total a Pagar</span><span>${{ selectedOrder.total | number:'1.0-0' }}</span></div>
-      </div>
-    </div>
-
-    <div class="detail-card" *ngIf="selectedOrder.notes">
-      <h4>Notas</h4>
-      <p class="notes-text">{{ selectedOrder.notes }}</p>
-    </div>
-
-    <!-- Factura - solo visible para Cocina y Admin -->
-    <div class="detail-card" *ngIf="relatedInvoice && showInvoices">
-      <h4>Factura</h4>
-      <div class="info-row">
-        <span>Número:</span>
-        <span>{{ relatedInvoice.invoiceNumber }}</span>
-      </div>
-      <div class="info-row">
-        <span>Negocio:</span>
-        <span>{{ relatedInvoice.businessName }}</span>
+      <div class="detail-total-row">
+        <span>Total</span>
+        <strong class="dk-mono">${{ selectedOrder.total | number:'1.0-0' }}</strong>
       </div>
     </div>
 
-    <div class="detail-actions" *ngIf="selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'reversed'">
-      <ion-button expand="block" color="danger" fill="outline" (click)="cancelOrder(selectedOrder)">
+    <div class="detail-section dk-card" *ngIf="selectedOrder.cleanNotes">
+      <h3 class="card-title">Observaciones de cocina</h3>
+      <p class="notes-text">{{ selectedOrder.cleanNotes }}</p>
+    </div>
+
+    <div class="detail-section dk-card" *ngIf="relatedInvoice && showInvoices">
+      <h3 class="card-title">Comprobante</h3>
+      <div class="info-list">
+        <div class="info-row">
+          <span>Número</span>
+          <strong class="dk-mono">{{ relatedInvoice.invoiceNumber }}</strong>
+        </div>
+        <div class="info-row">
+          <span>Establecimiento</span>
+          <strong>{{ relatedInvoice.businessName }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-actions">
+      <ion-button
+        *ngIf="canCancelActive(selectedOrder)"
+        expand="block"
+        color="danger"
+        fill="outline"
+        (click)="cancelOrder(selectedOrder)">
         <ion-icon name="close-circle-outline" slot="start"></ion-icon>
-        Cancelar Pedido
+        Cancelar Pedido y Restaurar Insumos
+      </ion-button>
+
+      <ion-button
+        *ngIf="canReverseCompleted(selectedOrder)"
+        expand="block"
+        color="danger"
+        fill="outline"
+        (click)="reverseOrder(selectedOrder)">
+        <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
+        Reversar Venta y Restaurar Insumos
       </ion-button>
     </div>
   </div>

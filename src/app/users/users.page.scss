@@ -1,81 +1,87 @@
-.users-content {
-  --background: #f5f5f5;
-}
-
-.users-count {
+.team-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 16px 16px 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #666;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
 
-  ion-icon {
-    font-size: 20px;
-    color: var(--ion-color-primary);
+  .team-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--dk-text-sm);
+    font-weight: 700;
+    color: var(--dk-ink-secondary);
+
+    ion-icon {
+      font-size: 20px;
+      color: var(--dk-brand);
+    }
+  }
+
+  .add-member-btn {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 12px;
+    border: none;
+    background: var(--dk-brand);
+    color: #FFFFFF;
+    font-size: var(--dk-text-sm);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
   }
 }
 
-.users-list {
-  padding: 8px 12px 80px;
+.users-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+
+  @media (min-width: 720px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .user-card {
-  border-radius: 16px;
-  margin: 0 0 12px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
 
-  &.is-admin {
-    border-left: 4px solid var(--ion-color-danger);
-  }
-
-  .user-content {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px;
+  &.is-protected {
+    border-left: 4px solid var(--dk-brand);
   }
 }
 
 .user-avatar {
-  width: 52px;
-  height: 52px;
-  min-width: 52px;
-  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e8eaf6;
-
-  ion-icon {
-    font-size: 36px;
-    color: var(--ion-color-primary);
-  }
+  font-family: var(--dk-font-display);
+  font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.08rem);
+  font-weight: 700;
+  flex-shrink: 0;
 
   &[data-role="admin"] {
-    background: #fce4ec;
-
-    ion-icon {
-      color: var(--ion-color-danger);
-    }
+    background: var(--dk-brand-soft);
+    color: var(--dk-brand-hover);
   }
 
   &[data-role="waiter"] {
-    background: #e3f2fd;
-
-    ion-icon {
-      color: var(--ion-color-primary);
-    }
+    background: var(--dk-info-soft);
+    color: var(--dk-info);
   }
 
   &[data-role="kitchen"] {
-    background: #fff8e1;
-
-    ion-icon {
-      color: var(--ion-color-warning);
-    }
+    background: var(--dk-gold-soft);
+    color: var(--dk-gold-ink);
   }
 }
 
@@ -83,76 +89,62 @@
   flex: 1;
   min-width: 0;
 
-  h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0 0 2px 0;
-    color: #1a1a2e;
+  .name-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
 
-    .admin-badge {
-      font-size: 16px;
+    h3 {
+      margin: 0;
+      font-size: clamp(0.96rem, 0.9rem + 0.25vw, 1.06rem);
+      font-weight: 700;
+      color: var(--dk-ink);
     }
   }
 
   .username {
-    font-size: 13px;
-    color: #999;
-    margin: 0 0 6px 0;
-  }
-
-  .user-meta {
-    ion-badge {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-
-      ion-icon {
-        font-size: 12px;
-      }
-    }
+    margin: 2px 0 6px;
+    font-size: var(--dk-text-xs);
+    color: var(--dk-ink-muted);
   }
 }
 
 .user-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
+  gap: 6px;
 
-  ion-button {
-    --padding-start: 6px;
-    --padding-end: 6px;
-  }
+  .act-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--dk-border);
+    background: var(--dk-surface-soft);
+    color: var(--dk-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
 
-  .lock-icon {
-    font-size: 22px;
+    &.del {
+      color: var(--dk-danger);
+      background: var(--dk-danger-soft);
+      border-color: var(--dk-danger-border);
+    }
+
+    ion-icon {
+      font-size: 19px;
+    }
   }
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 24px;
-  color: #999;
-
-  ion-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
-  }
-
-  h3 {
-    font-size: 18px;
-    margin: 0 0 8px 0;
-    color: #666;
-  }
-
-  p {
-    font-size: 14px;
-    margin: 0;
-  }
+.user-lock {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--dk-surface-muted);
+  color: var(--dk-ink-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

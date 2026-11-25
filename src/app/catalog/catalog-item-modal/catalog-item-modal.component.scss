@@ -1,23 +1,28 @@
 .modal-content {
-  --background: #f9f9f9;
+  --background: var(--dk-bg);
 }
 
-.item-form {
+.modal-form {
+  max-width: 560px;
+  margin: 0 auto;
   padding: 16px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
 .image-section {
-  text-align: center;
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
 
   .image-preview {
     position: relative;
     width: 120px;
     height: 120px;
-    margin: 0 auto 12px;
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--dk-border);
 
     img {
       width: 100%;
@@ -27,158 +32,137 @@
 
     .remove-image {
       position: absolute;
-      top: -4px;
-      right: -4px;
+      top: 6px;
+      right: 6px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(28, 25, 23, 0.78);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
     }
   }
 
   .image-placeholder {
     width: 120px;
     height: 120px;
-    margin: 0 auto 12px;
     border-radius: 16px;
-    background: #e8e8e8;
+    border: 1.5px dashed var(--dk-border-strong);
+    background: var(--dk-surface);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 4px;
-    color: #aaa;
+    color: var(--dk-ink-muted);
 
     ion-icon {
-      font-size: 36px;
+      font-size: 32px;
     }
 
     span {
-      font-size: 12px;
+      font-size: var(--dk-text-xs);
     }
   }
 
-  .image-actions {
-    margin-bottom: 8px;
-
-    .upload-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border-radius: 8px;
-      background: var(--ion-color-tertiary);
-      color: #fff;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-    }
+  .upload-btn {
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 10px;
+    background: var(--dk-chrome);
+    color: #FFFFFF;
+    font-size: clamp(0.8rem, 0.78rem + 0.18vw, 0.88rem);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
   }
-
 }
 
-.form-list {
-  background: transparent;
-}
+.two-cols {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
 
-.form-item {
-  --background: #fff;
-  --border-radius: 12px;
-  margin-bottom: 4px;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.field-error {
-  color: #d32f2f;
-  font-size: 12px;
-  padding: 2px 16px 8px;
-}
-
-// Recipe section
-.section-label {
-  font-size: 15px;
-  font-weight: 700;
-  color: #333;
-  margin: 20px 0 10px;
-  padding-left: 4px;
+  @media (min-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .recipe-list {
-  background: #fff;
-  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.recipe-item {
+.recipe-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 8px 10px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--dk-border);
 
   &:last-child {
     border-bottom: none;
   }
 
-  .recipe-info {
+  .recipe-name {
+    flex: 1;
+    font-size: var(--dk-text-sm);
+    font-weight: 600;
+    color: var(--dk-ink);
+  }
+
+  .recipe-del {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: var(--dk-danger-soft);
+    color: var(--dk-danger);
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .recipe-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .recipe-qty {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--ion-color-tertiary);
-    background: rgba(var(--ion-color-tertiary-rgb), 0.1);
-    padding: 2px 8px;
-    border-radius: 12px;
-    flex-shrink: 0;
+    justify-content: center;
+    cursor: pointer;
   }
 }
 
 .recipe-empty {
-  text-align: center;
-  padding: 16px;
-  color: #aaa;
-  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-
-  ion-icon {
-    font-size: 18px;
-  }
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--dk-border-strong);
+  color: var(--dk-ink-muted);
+  font-size: var(--dk-text-xs);
+  margin-bottom: 10px;
 }
 
 .recipe-add {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: env(safe-area-inset-bottom, 16px);
 
   .recipe-select {
     flex: 2;
+    margin-bottom: 0;
   }
 
-  .recipe-qty-input {
-    flex: 0 0 70px;
+  .recipe-qty {
+    flex: 0 0 74px;
+    margin-bottom: 0;
   }
 
-  ion-button {
-    --border-radius: 10px;
-    height: 44px;
+  .add-recipe-btn {
+    --border-radius: 12px;
+    height: 48px;
+    margin: 0;
     flex-shrink: 0;
   }
 }

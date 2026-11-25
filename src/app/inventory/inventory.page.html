@@ -1,67 +1,104 @@
 <ion-header class="ion-no-border">
-  <ion-toolbar color="secondary">
+  <ion-toolbar class="dk-toolbar">
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
     </ion-buttons>
     <ion-title>Inventario de Insumos</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="openAddModal()">
+      <ion-button (click)="openAddModal()" aria-label="Nuevo insumo" title="Agregar insumo">
         <ion-icon name="add-circle-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
-  <ion-toolbar color="secondary">
+  <ion-toolbar class="dk-sub-toolbar">
     <ion-searchbar
       placeholder="Buscar insumo..."
       (ionInput)="onSearch($event)"
-      [debounce]="300"
-      animated>
+      [debounce]="250">
     </ion-searchbar>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="inventory-content">
+  <div class="dk-page-container">
 
-  <!-- Alerta de bajo stock -->
-  <ng-container *ngIf="(lowStockInsumos$ | async) as lowStock">
-    <div class="low-stock-banner" *ngIf="lowStock.length > 0">
-      <ion-icon name="warning-outline"></ion-icon>
-      <span>{{ lowStock.length }} insumo(s) con stock bajo</span>
+    <!-- Filtros rápidos de estado -->
+    <div class="summary-filters">
+      <button type="button" class="filter-pill" [class.active]="stockFilter === 'all'" (click)="setFilter('all')">
+        Todos <span class="dk-mono">({{ allInsumos.length }})</span>
+      </button>
+      <button type="button" class="filter-pill warn" [class.active]="stockFilter === 'low'" (click)="setFilter('low')">
+        Stock bajo <span class="dk-mono">({{ lowStockCount }})</span>
+      </button>
+      <button type="button" class="filter-pill crit" [class.active]="stockFilter === 'out'" (click)="setFilter('out')">
+        Agotados <span class="dk-mono">({{ outOfStockCount }})</span>
+      </button>
     </div>
-  </ng-container>
 
-  <!-- Lista de insumos -->
-  <div class="products-list">
-    <ion-card *ngFor="let insumo of filteredInsumos" class="product-card" [class.low-stock]="isLowStock(insumo)">
-      <ion-card-content class="product-content">
+    <!-- Lista de insumos -->
+    <div class="insumos-grid" *ngIf="filteredInsumos.length > 0">
+      <article
+        class="insumo-card dk-card"
+        *ngFor="let insumo of filteredInsumos"
+        [class.is-low]="insumo.stock > 0 && isLowStock(insumo)"
+        [class.is-out]="insumo.stock === 0">
 
-        <div class="product-info">
-          <h3>{{ insumo.name }}</h3>
-          <div class="stock-row">
-            <ion-badge [color]="getStockColor(insumo)">
-              Stock: {{ insumo.stock }}
-            </ion-badge>
-            <span class="stock-threshold" *ngIf="isLowStock(insumo)">
-              Mín: {{ insumo.lowStockThreshold }}
-            </span>
+        <div class="insumo-top">
+          <div class="insumo-info">
+            <h3>{{ insumo.name }}</h3>
+            <div class="insumo-badges">
+              <span class="dk-pill dk-mono" [ngClass]="getStockStatusClass(insumo)">
+                {{ getStockStatusLabel(insumo) }} · {{ insumo.stock }}
+              </span>
+              <span class="threshold-lbl">Mín: {{ insumo.lowStockThreshold }}</span>
+            </div>
+          </div>
+
+          <div class="insumo-crud">
+            <button type="button" class="crud-btn" (click)="openEditModal(insumo)" aria-label="Editar insumo" title="Editar">
+              <ion-icon name="create-outline"></ion-icon>
+            </button>
+            <button type="button" class="crud-btn del" (click)="confirmDelete(insumo)" aria-label="Eliminar insumo" title="Eliminar">
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
           </div>
         </div>
 
-        <div class="product-actions">
-          <ion-button fill="clear" size="small" (click)="openEditModal(insumo)">
-            <ion-icon name="create-outline" slot="icon-only" color="primary"></ion-icon>
-          </ion-button>
-          <ion-button fill="clear" size="small" (click)="confirmDelete(insumo)">
-            <ion-icon name="trash-outline" slot="icon-only" color="danger"></ion-icon>
-          </ion-button>
+        <!-- Ajuste rápido de existencias -->
+        <div class="quick-restock">
+          <span class="restock-lbl">Ajuste rápido</span>
+          <div class="restock-btns">
+            <button
+              type="button"
+              class="adj-btn minus dk-mono"
+              [disabled]="insumo.stock <= 0 || updatingId === insumo.id"
+              (click)="quickAdjust(insumo, -1)">
+              -1
+            </button>
+            <button
+              type="button"
+              class="adj-btn plus dk-mono"
+              [disabled]="updatingId === insumo.id"
+              (click)="quickAdjust(insumo, 1)">
+              +1
+            </button>
+            <button
+              type="button"
+              class="adj-btn plus-lg dk-mono"
+              [disabled]="updatingId === insumo.id"
+              (click)="quickAdjust(insumo, 5)">
+              +5
+            </button>
+          </div>
         </div>
-      </ion-card-content>
-    </ion-card>
-
-    <div class="empty-state" *ngIf="filteredInsumos.length === 0">
-      <ion-icon name="cube-outline"></ion-icon>
-      <h3>No hay insumos</h3>
-      <p>Agrega insumos usando el botón +</p>
+      </article>
     </div>
+
+    <div class="dk-empty-state dk-card" *ngIf="filteredInsumos.length === 0">
+      <ion-icon name="cube-outline"></ion-icon>
+      <h3>Sin insumos en esta vista</h3>
+      <p>Prueba otro filtro o agrega nuevos insumos con el botón superior derecho.</p>
+    </div>
+
   </div>
 </ion-content>

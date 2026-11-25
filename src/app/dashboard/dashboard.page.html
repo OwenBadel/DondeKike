@@ -1,8 +1,14 @@
 <ion-header class="ion-no-border">
-  <ion-toolbar color="primary">
-    <ion-title>Donde Kike POS</ion-title>
+  <ion-toolbar class="dk-toolbar">
+    <div slot="start" class="toolbar-brand">
+      <img src="assets/media/logo.jpeg" alt="Donde Kike" class="toolbar-logo" />
+      <div class="toolbar-brand-text">
+        <span class="brand-name">Donde Kike</span>
+        <span class="brand-sub">Sistema POS</span>
+      </div>
+    </div>
     <ion-buttons slot="end">
-      <ion-button (click)="logout()">
+      <ion-button (click)="logout()" aria-label="Cerrar sesión" title="Cerrar sesión">
         <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -10,80 +16,152 @@
 </ion-header>
 
 <ion-content class="dashboard-content">
-  <!-- Welcome Section -->
-  <div class="welcome-section" *ngIf="user$ | async as user">
-    <div class="welcome-text">
-      <h2>¡Hola, {{ user.fullName }}!</h2>
-    </div>
-    <ion-icon name="fast-food" class="welcome-icon"></ion-icon>
-  </div>
+  <div class="dk-page-container" *ngIf="user$ | async as user">
 
-  <!-- Stats Cards -->
-  <div class="stats-grid">
-    <div class="stat-card orange">
-      <ion-icon name="receipt-outline"></ion-icon>
-      <div class="stat-info">
-        <span class="stat-value">{{ (todayOrdersCount$ | async) || 0 }}</span>
-        <span class="stat-label">Pedidos Hoy</span>
+    <!-- Saludo y contexto de turno -->
+    <section class="hero-bar">
+      <div class="hero-copy">
+        <span class="hero-date">{{ todayDate | date:"EEEE, d 'de' MMMM" }}</span>
+        <h1>Hola, {{ user.fullName }}</h1>
       </div>
-    </div>
+      <span class="role-chip" [attr.data-role]="user.role">
+        <ion-icon name="shield-checkmark-outline" *ngIf="user.role === 'admin'"></ion-icon>
+        <ion-icon name="cart-outline" *ngIf="user.role === 'waiter'"></ion-icon>
+        <ion-icon name="flame-outline" *ngIf="user.role === 'kitchen'"></ion-icon>
+        {{ getRoleLabel(user.role) }}
+      </span>
+    </section>
 
-    <div class="stat-card green" (click)="navigateTo('/sales')" style="cursor: pointer;">
-      <ion-icon name="cash-outline"></ion-icon>
-      <div class="stat-info">
-        <span class="stat-value">${{ ((todayRevenue$ | async) || 0) | number:'1.0-0' }}</span>
-        <span class="stat-label">Ventas Hoy</span>
-      </div>
-    </div>
-
-    <div class="stat-card blue">
-      <ion-icon name="time-outline"></ion-icon>
-      <div class="stat-info">
-        <span class="stat-value">{{ (pendingOrdersCount$ | async) || 0 }}</span>
-        <span class="stat-label">Pendientes</span>
-      </div>
-    </div>
-
-    <div class="stat-card purple">
-      <ion-icon name="cube-outline"></ion-icon>
-      <div class="stat-info">
-        <span class="stat-value">{{ (totalInsumos$ | async) || 0 }}</span>
-        <span class="stat-label">Insumos</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quick Actions -->
-  <h3 class="section-title">Acciones Rápidas</h3>
-  <div class="actions-grid">
-    <ng-container *ngFor="let item of menuItems">
-      <div class="action-card" *ngIf="isMenuVisible(item)" (click)="navigateTo(item.route)">
-        <div class="action-icon" [attr.data-color]="item.color">
-          <ion-icon [name]="item.icon"></ion-icon>
+    <!-- Indicadores clave según rol -->
+    <section class="kpi-grid">
+      <button type="button" class="kpi-card" (click)="navigateTo('/orders')">
+        <div class="kpi-icon brand">
+          <ion-icon name="receipt-outline"></ion-icon>
         </div>
-        <span class="action-label">{{ item.title }}</span>
-      </div>
+        <div class="kpi-meta">
+          <span class="kpi-label">Pedidos Hoy</span>
+          <strong class="kpi-value dk-mono">{{ (todayOrdersCount$ | async) || 0 }}</strong>
+        </div>
+      </button>
+
+      <button type="button" class="kpi-card" *ngIf="user.role === 'admin'" (click)="navigateTo('/sales')">
+        <div class="kpi-icon success">
+          <ion-icon name="cash-outline"></ion-icon>
+        </div>
+        <div class="kpi-meta">
+          <span class="kpi-label">Ventas Hoy</span>
+          <strong class="kpi-value dk-mono">${{ ((todayRevenue$ | async) || 0) | number:'1.0-0' }}</strong>
+        </div>
+      </button>
+
+      <button type="button" class="kpi-card" *ngIf="user.role === 'kitchen'" (click)="navigateTo('/kitchen')">
+        <div class="kpi-icon success">
+          <ion-icon name="checkmark-done-outline"></ion-icon>
+        </div>
+        <div class="kpi-meta">
+          <span class="kpi-label">Despachados Hoy</span>
+          <strong class="kpi-value dk-mono">{{ (todayCompletedCount$ | async) || 0 }}</strong>
+        </div>
+      </button>
+
+      <button type="button" class="kpi-card" (click)="navigateTo(user.role === 'waiter' ? '/orders' : '/kitchen')">
+        <div class="kpi-icon gold">
+          <ion-icon name="time-outline"></ion-icon>
+        </div>
+        <div class="kpi-meta">
+          <span class="kpi-label">En Cocina</span>
+          <strong class="kpi-value dk-mono">{{ (pendingOrdersCount$ | async) || 0 }}</strong>
+        </div>
+      </button>
+
+      <button type="button" class="kpi-card" *ngIf="user.role === 'admin'" (click)="navigateTo('/inventory')">
+        <div class="kpi-icon neutral">
+          <ion-icon name="cube-outline"></ion-icon>
+        </div>
+        <div class="kpi-meta">
+          <span class="kpi-label">Insumos Activos</span>
+          <strong class="kpi-value dk-mono">{{ (totalInsumos$ | async) || 0 }}</strong>
+        </div>
+      </button>
+
+      <button type="button" class="kpi-card" *ngIf="user.role === 'waiter'" (click)="navigateTo('/pos')">
+        <div class="kpi-icon neutral">
+          <ion-icon name="fast-food-outline"></ion-icon>
+        </div>
+        <div class="kpi-meta">
+          <span class="kpi-label">Platos en Menú</span>
+          <strong class="kpi-value dk-mono">{{ (totalCatalog$ | async) || 0 }}</strong>
+        </div>
+      </button>
+    </section>
+
+    <!-- Módulos operativos -->
+    <h2 class="dk-section-heading">Módulos Operativos</h2>
+    <section class="modules-grid">
+      <ng-container *ngFor="let item of menuItems">
+        <button
+          type="button"
+          class="module-card"
+          *ngIf="isMenuVisible(item, user.role)"
+          (click)="navigateTo(item.route)">
+          <div class="module-top">
+            <div class="module-icon" [attr.data-accent]="item.accent">
+              <ion-icon [name]="item.icon"></ion-icon>
+            </div>
+            <span
+              class="dk-pill warning dk-mono"
+              *ngIf="item.badgeKey === 'pending' && ((pendingOrdersCount$ | async) || 0) > 0">
+              {{ pendingOrdersCount$ | async }} activos
+            </span>
+            <span
+              class="dk-pill danger dk-mono"
+              *ngIf="item.badgeKey === 'lowStock' && ((lowStockInsumos$ | async)?.length || 0) > 0">
+              {{ (lowStockInsumos$ | async)?.length }} bajo
+            </span>
+            <span
+              class="dk-pill neutral dk-mono"
+              *ngIf="item.badgeKey === 'catalog'">
+              {{ (totalCatalog$ | async) || 0 }} ítems
+            </span>
+          </div>
+          <div class="module-copy">
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.subtitle }}</p>
+          </div>
+          <ion-icon name="arrow-forward-outline" class="module-arrow"></ion-icon>
+        </button>
+      </ng-container>
+    </section>
+
+    <!-- Alerta de inventario bajo (solo Admin) -->
+    <ng-container *ngIf="user.role === 'admin'">
+      <ng-container *ngIf="lowStockInsumos$ | async as lowStock">
+        <section class="alert-panel dk-card" *ngIf="lowStock.length > 0">
+          <div class="alert-panel-head">
+            <div class="alert-title">
+              <ion-icon name="warning-outline"></ion-icon>
+              <span>Insumos por reabastecer ({{ lowStock.length }})</span>
+            </div>
+            <button type="button" class="link-btn" (click)="navigateTo('/inventory')">
+              Ir a inventario
+              <ion-icon name="chevron-forward-outline"></ion-icon>
+            </button>
+          </div>
+
+          <div class="alert-rows">
+            <div class="alert-row" *ngFor="let insumo of lowStock" (click)="navigateTo('/inventory')">
+              <div class="alert-info">
+                <strong>{{ insumo.name }}</strong>
+                <span>Umbral mínimo: {{ insumo.lowStockThreshold }}</span>
+              </div>
+              <span class="dk-pill dk-mono" [class.danger]="insumo.stock === 0" [class.warning]="insumo.stock > 0">
+                {{ insumo.stock === 0 ? 'Agotado' : insumo.stock + ' disp.' }}
+              </span>
+            </div>
+          </div>
+        </section>
+      </ng-container>
     </ng-container>
+
   </div>
-
-  <!-- Low Stock Alert -->
-  <ng-container *ngIf="(lowStockInsumos$ | async) as lowStock">
-    <div class="alert-section" *ngIf="lowStock.length > 0">
-      <h3 class="section-title">
-        <ion-icon name="warning-outline" color="warning"></ion-icon>
-        Stock Bajo ({{ lowStock.length }})
-      </h3>
-      <ion-list lines="none" class="low-stock-list">
-        <ion-item *ngFor="let insumo of lowStock" class="low-stock-item">
-          <ion-icon name="alert-circle" color="danger" slot="start"></ion-icon>
-          <ion-label>
-            <h3>{{ insumo.name }}</h3>
-            <p>Stock: <strong>{{ insumo.stock }}</strong> / Mínimo: {{ insumo.lowStockThreshold }}</p>
-          </ion-label>
-          <ion-badge color="danger" slot="end">{{ insumo.stock }}</ion-badge>
-        </ion-item>
-      </ion-list>
-    </div>
-  </ng-container>
-
 </ion-content>

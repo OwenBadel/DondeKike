@@ -1,8 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { CatalogItem, CatalogFormData, InsumoRecipe } from '../models/catalog.model';
 import { SupabaseService } from './supabase.service';
+import { validateImageFile } from '../utils/form-validators.util';
 
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
@@ -10,43 +10,67 @@ export class CatalogService {
   private sb = inject(SupabaseService);
 
   private items$ = new BehaviorSubject<CatalogItem[]>([]);
+  private realtimeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.loadItems();
+    this.initRealtime();
   }
 
   get allItems$(): Observable<CatalogItem[]> {
     return this.items$.asObservable();
   }
 
+  get currentItems(): CatalogItem[] {
+    return this.items$.value;
+  }
+
   getItemById(id: string): CatalogItem | undefined {
     return this.items$.value.find(i => i.id === id);
   }
 
-  getItemsByCategory(category: string): Observable<CatalogItem[]> {
-    return this.items$.pipe(
-      map(items => items.filter(i => i.category === category))
+  getItemsUsingInsumo(insumoId: string): CatalogItem[] {
+    return this.items$.value.filter(item =>
+      (item.insumoRecipe || []).some(r => r.insumoId === insumoId)
     );
   }
 
-  searchItems(term: string): Observable<CatalogItem[]> {
-    const lower = term.toLowerCase().trim();
-    return this.items$.pipe(
-      map(items => items.filter(i =>
-        i.name.toLowerCase().includes(lower) ||
-        i.content.toLowerCase().includes(lower) ||
-        i.category.toLowerCase().includes(lower)
-      ))
-    );
+  private initRealtime(): void {
+    try {
+      this.sb.client
+        .channel('realtime:catalog_items')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'catalog_items' }, () => {
+          this.scheduleRefresh();
+        })
+        .subscribe();
+    } catch {
+      // Realtime opcional si la publicación no incluye catalog_items
+    }
+  }
+
+  private scheduleRefresh(): void {
+    if (this.realtimeTimer) clearTimeout(this.realtimeTimer);
+    this.realtimeTimer = setTimeout(() => this.refresh(), 150);
   }
 
   async uploadImage(file: File): Promise<string> {
-    const ext = file.name.split('.').pop() || 'jpg';
+    const check = validateImageFile(file);
+    if (!check.valid) {
+      throw new Error(check.message || 'Imagen no válida.');
+    }
+
+    const mimeExtMap: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/avif': 'avif'
+    };
+    const ext = mimeExtMap[file.type] || 'jpg';
     const path = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
     const { error } = await this.sb.client.storage
       .from('catalog-images')
-      .upload(path, file, { cacheControl: '3600', upsert: false });
+      .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
 
     if (error) throw error;
 
@@ -64,10 +88,18 @@ export class CatalogService {
       if (parts.length < 2) return;
       const path = decodeURIComponent(parts[1]);
       await this.sb.client.storage.from('catalog-images').remove([path]);
-    } catch { /* ignore */ }
+    } catch {
+      // Ignorar errores de limpieza de imágenes locales o externas
+    }
   }
 
-  async addItem(data: CatalogFormData): Promise<CatalogItem> {
+  async addItem(data: CatalogFormData): Promise<CatalogItem | null> {
+    const cleanName = (data.name || '').trim();
+    const cleanContent = (data.content || '').trim();
+    if (cleanName.length < 2 || !cleanContent) {
+      return null;
+    }
+
     const currentItems = this.items$.value;
     const maxOrder = currentItems.length > 0
       ? Math.max(...currentItems.map(i => i.sortOrder || 0))
@@ -75,29 +107,48 @@ export class CatalogService {
 
     const row = {
       id: this.generateId(),
-      name: data.name.trim(),
+      name: cleanName,
       image: data.image || '',
-      content: data.content.trim(),
-      price: Math.max(0, data.price),
+      content: cleanContent,
+      price: Math.max(0, Math.round(Number(data.price) || 0)),
       category: data.category,
       sort_order: data.sortOrder ?? (maxOrder + 1),
-      insumo_recipe: JSON.stringify(data.insumoRecipe || [])
+      insumo_recipe: data.insumoRecipe || []
     };
 
-    await this.sb.client.from('catalog_items').insert(row);
+    const { data: inserted, error } = await this.sb.client
+      .from('catalog_items')
+      .insert(row)
+      .select()
+      .single();
+
+    if (error) {
+      return null;
+    }
+
     await this.refresh();
-    return this.mapRow({ ...row, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+    return inserted
+      ? this.mapRow(inserted)
+      : this.mapRow({ ...row, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
   }
 
   async updateItem(id: string, data: Partial<CatalogFormData>): Promise<CatalogItem | null> {
-    const updates: any = { updated_at: new Date().toISOString() };
-    if (data.name !== undefined) updates.name = data.name.trim();
-    if (data.image !== undefined) updates.image = data.image;
-    if (data.content !== undefined) updates.content = data.content.trim();
-    if (data.price !== undefined) updates.price = Math.max(0, data.price);
-    if (data.category !== undefined) updates.category = data.category;
-    if (data.sortOrder !== undefined) updates.sort_order = data.sortOrder;
-    if (data.insumoRecipe !== undefined) updates.insumo_recipe = JSON.stringify(data.insumoRecipe);
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (data.name !== undefined) {
+      const cleanName = data.name.trim();
+      if (cleanName.length < 2) return null;
+      updates['name'] = cleanName;
+    }
+    if (data.image !== undefined) updates['image'] = data.image;
+    if (data.content !== undefined) {
+      const cleanContent = data.content.trim();
+      if (!cleanContent) return null;
+      updates['content'] = cleanContent;
+    }
+    if (data.price !== undefined) updates['price'] = Math.max(0, Math.round(Number(data.price) || 0));
+    if (data.category !== undefined) updates['category'] = data.category;
+    if (data.sortOrder !== undefined) updates['sort_order'] = data.sortOrder;
+    if (data.insumoRecipe !== undefined) updates['insumo_recipe'] = data.insumoRecipe;
 
     const { data: updated, error } = await this.sb.client
       .from('catalog_items')
@@ -113,17 +164,18 @@ export class CatalogService {
 
   async deleteItem(id: string): Promise<boolean> {
     const item = this.getItemById(id);
+    const { error } = await this.sb.client.from('catalog_items').delete().eq('id', id);
+    if (error) return false;
+
     if (item?.image) {
       await this.deleteImage(item.image);
     }
-    const { error } = await this.sb.client.from('catalog_items').delete().eq('id', id);
-    if (error) return false;
+
     await this.refresh();
     return true;
   }
 
   async refresh(): Promise<void> {
-    // Intentar ordenar por sort_order, con fallback a created_at
     const { data, error } = await this.sb.client
       .from('catalog_items')
       .select('*')
@@ -154,14 +206,16 @@ export class CatalogService {
       recipe = typeof row.insumo_recipe === 'string'
         ? JSON.parse(row.insumo_recipe)
         : (row.insumo_recipe || []);
-    } catch { recipe = []; }
+    } catch {
+      recipe = [];
+    }
 
     return {
       id: row.id,
       name: row.name,
       image: row.image || '',
       content: row.content || '',
-      price: row.price,
+      price: Math.round(Number(row.price) || 0),
       category: row.category,
       sortOrder: row.sort_order || 0,
       insumoRecipe: recipe,

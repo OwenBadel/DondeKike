@@ -2,6 +2,7 @@ import { Component, Input, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalController } from '@ionic/angular';
 import { Insumo } from '../../models/product.model';
+import { trimmedMinLength, trimmedRequired } from '../../utils/form-validators.util';
 
 @Component({
   selector: 'app-product-modal',
@@ -21,17 +22,23 @@ export class ProductModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.insumoForm = this.fb.group({
-      name: [this.insumo?.name || '', [Validators.required, Validators.minLength(2)]],
-      stock: [this.insumo?.stock || 0, [Validators.required, Validators.min(0)]],
-      lowStockThreshold: [this.insumo?.lowStockThreshold || 10, [Validators.required, Validators.min(0)]]
+      name: [this.insumo?.name ?? '', [trimmedRequired(), trimmedMinLength(2), Validators.maxLength(80)]],
+      stock: [this.insumo?.stock ?? 0, [Validators.required, Validators.min(0)]],
+      lowStockThreshold: [this.insumo?.lowStockThreshold ?? 5, [Validators.required, Validators.min(0)]]
     });
   }
 
   save(): void {
     if (this.insumoForm.valid) {
+      const val = this.insumoForm.value;
       this.modalCtrl.dismiss({
         saved: true,
-        insumo: this.insumoForm.value
+        insumo: {
+          name: String(val.name || '').trim(),
+          stock: Math.max(0, Math.round(Number(val.stock) || 0)),
+          lowStockThreshold: Math.max(0, Math.round(Number(val.lowStockThreshold) || 0)),
+          image: this.insumo?.image ?? ''
+        }
       });
     } else {
       this.insumoForm.markAllAsTouched();

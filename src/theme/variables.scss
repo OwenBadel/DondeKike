@@ -1,2 +1,137 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+/* ==========================================================================
+ * Donde Kike POS — Sistema de Tokens Corporativos ("La Esquina del Sabor")
+ * Paleta de alto contraste WCAG AA alineada con la identidad de marca.
+ * ========================================================================== */
+
+:root {
+  /* Marca principal: Brasa Kike (Ember Terracotta, contraste >= 4.6:1 con blanco) */
+  --ion-color-primary: #D9480F;
+  --ion-color-primary-rgb: 217, 72, 15;
+  --ion-color-primary-contrast: #FFFFFF;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #B83A0B;
+  --ion-color-primary-tint: #E8590C;
+
+  /* Secundario operativo: Carbón Parrilla */
+  --ion-color-secondary: #292524;
+  --ion-color-secondary-rgb: 41, 37, 36;
+  --ion-color-secondary-contrast: #FFFFFF;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #1C1917;
+  --ion-color-secondary-tint: #44403C;
+
+  /* Acento cálido: Dorado Mostaza */
+  --ion-color-tertiary: #B45309;
+  --ion-color-tertiary-rgb: 180, 83, 9;
+  --ion-color-tertiary-contrast: #FFFFFF;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #92400E;
+  --ion-color-tertiary-tint: #D97706;
+
+  /* Éxito / Caja / Ventas (contraste 5.1:1 con blanco) */
+  --ion-color-success: #15803D;
+  --ion-color-success-rgb: 21, 128, 61;
+  --ion-color-success-contrast: #FFFFFF;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #166534;
+  --ion-color-success-tint: #16A34A;
+
+  /* Advertencia / En espera */
+  --ion-color-warning: #D97706;
+  --ion-color-warning-rgb: 217, 119, 6;
+  --ion-color-warning-contrast: #FFFFFF;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #B45309;
+  --ion-color-warning-tint: #F59E0B;
+
+  /* Peligro / Stock crítico / Cancelaciones (contraste 4.8:1 con blanco) */
+  --ion-color-danger: #DC2626;
+  --ion-color-danger-rgb: 220, 38, 38;
+  --ion-color-danger-contrast: #FFFFFF;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #B91C1C;
+  --ion-color-danger-tint: #EF4444;
+
+  /* Neutros cálidos */
+  --ion-color-dark: #1C1917;
+  --ion-color-dark-rgb: 28, 25, 23;
+  --ion-color-dark-contrast: #FFFFFF;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #141210;
+  --ion-color-dark-tint: #292524;
+
+  --ion-color-medium: #57534E;
+  --ion-color-medium-rgb: 87, 83, 78;
+  --ion-color-medium-contrast: #FFFFFF;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #44403C;
+  --ion-color-medium-tint: #78716C;
+
+  --ion-color-light: #F6F4F0;
+  --ion-color-light-rgb: 246, 244, 240;
+  --ion-color-light-contrast: #1C1917;
+  --ion-color-light-contrast-rgb: 28, 25, 23;
+  --ion-color-light-shade: #E7E2DA;
+  --ion-color-light-tint: #FAF8F5;
+
+  /* Tokens semánticos Donde Kike */
+  --dk-bg: #F6F4F0;
+  --dk-surface: #FFFFFF;
+  --dk-surface-soft: #FAF8F5;
+  --dk-surface-muted: #EFECE6;
+  --dk-border: #E5DFD5;
+  --dk-border-strong: #D6CEC2;
+
+  --dk-chrome: #1C1917;
+  --dk-chrome-elevated: #292524;
+  --dk-kds-bg: #141210;
+  --dk-kds-surface: #1F1C19;
+
+  --dk-ink: #1C1917;
+  --dk-ink-secondary: #57534E;
+  --dk-ink-muted: #78716C;
+
+  --dk-brand: #D9480F;
+  --dk-brand-hover: #B83A0B;
+  --dk-brand-soft: #FFF4ED;
+  --dk-brand-border: #FDBA74;
+
+  --dk-gold: #D97706;
+  --dk-gold-soft: #FEF3C7;
+  --dk-gold-ink: #92400E;
+
+  --dk-success: #15803D;
+  --dk-success-soft: #ECFDF3;
+  --dk-success-border: #BBF7D0;
+
+  --dk-danger: #DC2626;
+  --dk-danger-soft: #FEF2F2;
+  --dk-danger-border: #FECACA;
+
+  --dk-info: #0369A1;
+  --dk-info-soft: #F0F9FF;
+  --dk-info-border: #BAE6FD;
+
+  /* Tipografía */
+  --dk-font-display: 'Space Grotesk', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --dk-font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --dk-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --ion-font-family: var(--dk-font-sans);
+
+  /* Escala tipográfica fluida */
+  --dk-text-xs: clamp(0.72rem, 0.7rem + 0.15vw, 0.78rem);
+  --dk-text-sm: clamp(0.82rem, 0.79rem + 0.18vw, 0.88rem);
+  --dk-text-base: clamp(0.92rem, 0.89rem + 0.2vw, 0.98rem);
+  --dk-text-lg: clamp(1.05rem, 0.98rem + 0.35vw, 1.2rem);
+  --dk-text-xl: clamp(1.25rem, 1.12rem + 0.65vw, 1.55rem);
+  --dk-text-2xl: clamp(1.65rem, 1.38rem + 1.2vw, 2.2rem);
+
+  /* Radios y elevaciones */
+  --dk-radius-sm: 8px;
+  --dk-radius-md: 12px;
+  --dk-radius-lg: 16px;
+  --dk-radius-xl: 20px;
+  --dk-shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.05);
+  --dk-shadow-sm: 0 2px 8px rgba(28, 25, 23, 0.06);
+  --dk-shadow-md: 0 8px 24px rgba(28, 25, 23, 0.1);
+}

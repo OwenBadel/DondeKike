@@ -7,8 +7,19 @@ import { InventoryService } from '../services/inventory.service';
 import { OrderService } from '../services/order.service';
 import { CatalogService } from '../services/catalog.service';
 import { CartService } from '../services/cart.service';
+import { AlertService } from '../services/alert.service';
 import { Insumo } from '../models/product.model';
-import { User } from '../models/user.model';
+import { User, UserRole } from '../models/user.model';
+
+interface DashboardModuleItem {
+  title: string;
+  subtitle: string;
+  icon: string;
+  route: string;
+  accent: 'brand' | 'gold' | 'success' | 'neutral';
+  roles: UserRole[];
+  badgeKey?: 'pending' | 'lowStock' | 'catalog';
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -23,6 +34,7 @@ export class DashboardPage implements OnInit {
   private catalogService = inject(CatalogService);
   private orderService = inject(OrderService);
   private cartService = inject(CartService);
+  private alertService = inject(AlertService);
   private router = inject(Router);
 
   user$!: Observable<User | null>;
@@ -30,17 +42,72 @@ export class DashboardPage implements OnInit {
   totalCatalog$!: Observable<number>;
   lowStockInsumos$!: Observable<Insumo[]>;
   pendingOrdersCount$!: Observable<number>;
+  todayCompletedCount$!: Observable<number>;
   todayRevenue$!: Observable<number>;
   todayOrdersCount$!: Observable<number>;
 
-  menuItems = [
-    { title: 'Punto de Venta', icon: 'cart-outline', route: '/pos', color: 'primary', roles: ['admin', 'waiter'] },
-    { title: 'Cocina', icon: 'restaurant-outline', route: '/kitchen', color: 'warning', roles: ['admin', 'kitchen'] },
-    { title: 'Catálogo', icon: 'fast-food-outline', route: '/catalog', color: 'tertiary', roles: ['admin'] },
-    { title: 'Inventario', icon: 'cube-outline', route: '/inventory', color: 'secondary', roles: ['admin'] },
-    { title: 'Historial', icon: 'receipt-outline', route: '/orders', color: 'success', roles: ['admin', 'waiter', 'kitchen'] },
-    { title: 'Cierre de Caja', icon: 'wallet-outline', route: '/sales', color: 'success', roles: ['admin'] },
-    { title: 'Usuarios', icon: 'person-outline', route: '/users', color: 'dark', roles: ['admin'] }
+  todayDate = new Date();
+
+  menuItems: DashboardModuleItem[] = [
+    {
+      title: 'Punto de Venta',
+      subtitle: 'Tomar pedidos y cobrar',
+      icon: 'cart-outline',
+      route: '/pos',
+      accent: 'brand',
+      roles: ['admin', 'waiter']
+    },
+    {
+      title: 'Monitor de Cocina',
+      subtitle: 'Comandas activas en vivo',
+      icon: 'flame-outline',
+      route: '/kitchen',
+      accent: 'gold',
+      roles: ['admin', 'kitchen'],
+      badgeKey: 'pending'
+    },
+    {
+      title: 'Historial de Pedidos',
+      subtitle: 'Órdenes y comprobantes',
+      icon: 'receipt-outline',
+      route: '/orders',
+      accent: 'neutral',
+      roles: ['admin', 'waiter', 'kitchen']
+    },
+    {
+      title: 'Cierre de Caja',
+      subtitle: 'Arqueo y métricas diarias',
+      icon: 'wallet-outline',
+      route: '/sales',
+      accent: 'success',
+      roles: ['admin']
+    },
+    {
+      title: 'Catálogo del Menú',
+      subtitle: 'Platos, precios y recetas',
+      icon: 'fast-food-outline',
+      route: '/catalog',
+      accent: 'brand',
+      roles: ['admin'],
+      badgeKey: 'catalog'
+    },
+    {
+      title: 'Inventario',
+      subtitle: 'Control y reabastecimiento',
+      icon: 'cube-outline',
+      route: '/inventory',
+      accent: 'gold',
+      roles: ['admin'],
+      badgeKey: 'lowStock'
+    },
+    {
+      title: 'Equipo y Accesos',
+      subtitle: 'Usuarios, roles y PIN',
+      icon: 'people-outline',
+      route: '/users',
+      accent: 'neutral',
+      roles: ['admin']
+    }
   ];
 
   ngOnInit(): void {
@@ -60,6 +127,10 @@ export class DashboardPage implements OnInit {
       map(orders => orders.length)
     );
 
+    this.todayCompletedCount$ = this.orderService.todayCompletedOrders$.pipe(
+      map(orders => orders.length)
+    );
+
     this.todayRevenue$ = this.orderService.getTodayRevenue();
 
     this.todayOrdersCount$ = this.orderService.getTodayOrders().pipe(
@@ -68,26 +139,41 @@ export class DashboardPage implements OnInit {
   }
 
   ionViewWillEnter(): void {
+    this.todayDate = new Date();
     this.orderService.refresh();
     this.inventoryService.refresh();
-    this.todayRevenue$ = this.orderService.getTodayRevenue();
-    this.todayOrdersCount$ = this.orderService.getTodayOrders().pipe(
-      map(orders => orders.length)
-    );
+    this.catalogService.refresh();
   }
 
   navigateTo(route: string): void {
     this.router.navigate([route]);
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
+    const confirmed = await this.alertService.confirm(
+      '¿Cerrar sesión?',
+      'Se limpiará el carrito actual y volverás a la pantalla de acceso.',
+      'Cerrar sesión',
+      'Seguir aquí',
+      'question'
+    );
+    if (!confirmed) return;
+
     this.cartService.clear();
     this.authService.logout();
-    this.router.navigate(['/login']);
+    this.router.navigate(['/login'], { replaceUrl: true });
   }
 
-  isMenuVisible(item: { roles: string[] }): boolean {
-    const role = this.authService.userRole;
+  isMenuVisible(item: DashboardModuleItem, role: UserRole | null): boolean {
     return role ? item.roles.includes(role) : false;
+  }
+
+  getRoleLabel(role: UserRole): string {
+    switch (role) {
+      case 'admin': return 'Administrador';
+      case 'waiter': return 'Mesero / Caja';
+      case 'kitchen': return 'Cocina KDS';
+      default: return role;
+    }
   }
 }

@@ -20,7 +20,7 @@ export class UsersPage implements OnInit {
   users: User[] = [];
   roles: { value: UserRole; label: string }[] = [
     { value: 'admin', label: 'Administrador' },
-    { value: 'waiter', label: 'Mesero' },
+    { value: 'waiter', label: 'Mesero / Caja' },
     { value: 'kitchen', label: 'Cocina' }
   ];
 
@@ -36,39 +36,36 @@ export class UsersPage implements OnInit {
     this.users = await this.authService.getAllUsers();
   }
 
+  getInitials(fullName: string): string {
+    const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'DK';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
   getRoleLabel(role: UserRole): string {
     return this.roles.find(r => r.value === role)?.label || role;
   }
 
-  getRoleColor(role: UserRole): string {
+  getRolePillClass(role: UserRole): string {
     switch (role) {
-      case 'admin': return 'danger';
-      case 'waiter': return 'primary';
+      case 'admin': return 'brand';
+      case 'waiter': return 'info';
       case 'kitchen': return 'warning';
-      default: return 'medium';
-    }
-  }
-
-  getRoleIcon(role: UserRole): string {
-    switch (role) {
-      case 'admin': return 'shield-outline';
-      case 'waiter': return 'people-outline';
-      case 'kitchen': return 'restaurant-outline';
-      default: return 'person-outline';
-    }
-  }
-
-  getUserIcon(role: UserRole): string {
-    switch (role) {
-      case 'admin': return 'person-circle';
-      case 'waiter': return 'person-circle-outline';
-      case 'kitchen': return 'person-circle-outline';
-      default: return 'person-circle-outline';
+      default: return 'neutral';
     }
   }
 
   isDefaultAdmin(user: User): boolean {
     return user.id === 'usr_admin_default';
+  }
+
+  isCurrentUser(user: User): boolean {
+    return this.authService.isCurrentUser(user.id);
+  }
+
+  isProtected(user: User): boolean {
+    return this.isDefaultAdmin(user) || this.isCurrentUser(user);
   }
 
   async openCreateModal(): Promise<void> {
@@ -85,14 +82,14 @@ export class UsersPage implements OnInit {
   }
 
   async confirmChangeRole(user: User): Promise<void> {
-    if (this.isDefaultAdmin(user)) {
-      this.alertService.toast('No se puede cambiar el rol del administrador por defecto', 'warning');
+    if (this.isProtected(user)) {
+      this.alertService.toast('No se puede cambiar el rol de esta cuenta protegida', 'warning');
       return;
     }
 
     const options: Record<string, string> = {
       admin: 'Administrador',
-      waiter: 'Mesero',
+      waiter: 'Mesero / Caja',
       kitchen: 'Cocina'
     };
 
@@ -111,14 +108,14 @@ export class UsersPage implements OnInit {
   }
 
   async confirmDelete(user: User): Promise<void> {
-    if (this.isDefaultAdmin(user)) {
-      this.alertService.toast('No se puede eliminar el administrador por defecto', 'warning');
+    if (this.isProtected(user)) {
+      this.alertService.toast('No se puede eliminar esta cuenta protegida', 'warning');
       return;
     }
 
     const confirmed = await this.alertService.confirm(
-      '¿Eliminar Usuario?',
-      `¿Está seguro de eliminar a "${user.fullName}"? Esta acción no se puede deshacer.`,
+      '¿Eliminar usuario?',
+      `¿Estás seguro de eliminar a "${user.fullName}"? Esta acción no se puede deshacer.`,
       'Sí, eliminar',
       'Cancelar',
       'warning'

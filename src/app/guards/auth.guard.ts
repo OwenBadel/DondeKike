@@ -8,7 +8,8 @@ export class AuthGuard implements CanActivate {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  canActivate(): boolean | UrlTree {
+  async canActivate(): Promise<boolean | UrlTree> {
+    await this.authService.waitUntilReady();
     if (this.authService.isLoggedIn) {
       return true;
     }

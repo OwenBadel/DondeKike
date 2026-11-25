@@ -32,7 +32,8 @@
               }
             ],
             "styles": ["src/global.scss", "src/theme/variables.scss"],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": ["sweetalert2"]
           },
           "configurations": {
             "production": {
@@ -44,8 +45,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "6kb",
-                  "maximumError": "10kb"
+                  "maximumWarning": "9kb",
+                  "maximumError": "14kb"
                 }
               ],
               "fileReplacements": [

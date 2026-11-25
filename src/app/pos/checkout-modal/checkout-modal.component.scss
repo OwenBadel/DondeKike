@@ -1,301 +1,295 @@
 .checkout-content {
-  --background: #f4f5f8;
+  --background: var(--dk-bg);
 }
 
-.checkout-form-container {
+.checkout-container {
   padding: 16px;
-  max-width: 600px;
+  max-width: 580px;
   margin: 0 auto;
 }
 
-// 1. Tarjeta Hero con el Total
 .hero-total-card {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  color: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 12px rgba(30, 60, 114, 0.2);
+  background: linear-gradient(135deg, #1C1917 0%, #2D211B 65%, #4A2211 100%);
+  color: #FFFFFF;
+  border-radius: var(--dk-radius-xl);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--dk-shadow-sm);
+
+  .hero-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
 
   .hero-label {
-    font-size: 13px;
-    font-weight: 500;
+    font-size: var(--dk-text-xs);
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    opacity: 0.85;
-    margin-bottom: 4px;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.72);
   }
 
   .hero-amount {
-    font-size: 36px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
+    font-size: clamp(1.65rem, 1.4rem + 1vw, 2.15rem);
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+
+  .hero-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+
+    .hero-item-chip {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.92);
+    }
   }
 }
 
-.section-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: #555;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 18px 0 10px;
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
-// Chips de selección
-.selector-chips {
+.option-btn {
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--dk-border);
+  background: var(--dk-surface);
+  color: var(--dk-ink-secondary);
+  font-size: var(--dk-text-sm);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+
+  ion-icon {
+    font-size: 19px;
+  }
+
+  &.active {
+    background: var(--dk-brand-soft);
+    border-color: var(--dk-brand);
+    color: var(--dk-brand-hover);
+  }
+
+  &.pay.active {
+    background: var(--dk-success-soft);
+    border-color: var(--dk-success);
+    color: var(--dk-success);
+  }
+}
+
+.table-field {
+  margin-bottom: 10px;
+}
+
+.cash-card {
+  padding: 14px;
+  margin-bottom: 14px;
+
+  .cash-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--dk-text-sm);
+    font-weight: 700;
+    color: var(--dk-ink);
+    margin-bottom: 10px;
+
+    ion-icon {
+      font-size: 19px;
+      color: var(--dk-success);
+    }
+  }
+
+  .quick-cash-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+
+    .quick-btn {
+      min-height: 42px;
+      padding: 6px;
+      border-radius: 10px;
+      border: 1px solid var(--dk-border);
+      background: var(--dk-surface-soft);
+      color: var(--dk-ink-secondary);
+      font-size: var(--dk-text-xs);
+      font-weight: 700;
+      cursor: pointer;
+
+      &.active {
+        background: var(--dk-success);
+        border-color: var(--dk-success);
+        color: #FFFFFF;
+      }
+    }
+  }
+
+  .cash-input {
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+
+  .change-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--dk-surface-muted);
+    color: var(--dk-ink);
+
+    span {
+      font-size: var(--dk-text-sm);
+      font-weight: 600;
+    }
+
+    strong {
+      font-size: clamp(1.15rem, 1.05rem + 0.5vw, 1.4rem);
+      font-weight: 700;
+    }
+
+    &.positive {
+      background: var(--dk-success-soft);
+      border: 1px solid var(--dk-success-border);
+      color: var(--dk-success);
+    }
+
+    &.negative {
+      background: var(--dk-danger-soft);
+      border: 1px solid var(--dk-danger-border);
+      color: var(--dk-danger);
+    }
+  }
+}
+
+.quick-notes {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
 
-  .action-chip {
-    font-size: 14px;
-    font-weight: 600;
-    padding: 10px 14px;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    ion-icon {
-      font-size: 18px;
-    }
-  }
-}
-
-.table-input-container {
-  margin-bottom: 12px;
-
-  .table-input-item {
-    --background: #fff;
-    --border-radius: 12px;
-    border-radius: 12px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-    font-weight: 600;
-  }
-}
-
-// Tarjeta de Calculadora de Efectivo
-.cash-calculator-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e2e8f0;
-
-  .calc-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
+  .note-pill {
+    min-height: 38px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--dk-border);
+    background: var(--dk-surface);
+    color: var(--dk-ink-secondary);
+    font-size: var(--dk-text-xs);
     font-weight: 700;
-    color: #2d3748;
-    margin-bottom: 12px;
-
-    ion-icon {
-      font-size: 20px;
-    }
-  }
-
-  .quick-cash-buttons {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-bottom: 12px;
-
-    .quick-btn {
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 10px 4px;
-      font-size: 13px;
-      font-weight: 700;
-      color: #334155;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:active {
-        transform: scale(0.95);
-      }
-
-      &.active {
-        background: #10b981 !important;
-        border-color: #059669 !important;
-        color: #ffffff !important;
-        box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35) !important;
-      }
-    }
-  }
-
-  .cash-input-item {
-    --background: #f7fafc;
-    --border-radius: 10px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 12px;
-    font-weight: 700;
-    font-size: 18px;
-  }
-
-  .change-box {
-    background: #edf2f7;
-    border-radius: 12px;
-    padding: 12px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    .change-label {
-      font-size: 14px;
-      font-weight: 600;
-      color: #4a5568;
-    }
-
-    .change-value {
-      font-size: 22px;
-      font-weight: 800;
-      color: #2d3748;
-    }
-
-    &.positive {
-      background: #f0fff4;
-      border: 1px solid #9ae6b4;
-
-      .change-value {
-        color: #22543d;
-      }
-    }
-
-    &.negative {
-      background: #fff5f5;
-      border: 1px solid #feb2b2;
-
-      .change-value {
-        color: #742a2a;
-      }
-    }
-  }
-}
-
-// Chips de notas rápidas
-.quick-notes-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 14px;
-
-  .note-chip {
-    font-size: 13px;
-    font-weight: 600;
-    margin: 0;
-    border-radius: 8px;
     cursor: pointer;
-  }
-}
 
-.customer-form {
-  .form-item {
-    --background: #fff;
-    --border-radius: 12px;
-    border-radius: 12px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    &.active {
+      background: var(--dk-gold-soft);
+      border-color: #F59E0B;
+      color: var(--dk-gold-ink);
+    }
   }
 }
 
 .checkout-actions {
-  margin-top: 24px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom, 16px));
+  margin-top: 18px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
 
   .confirm-btn {
     --border-radius: 14px;
-    font-size: 17px;
-    font-weight: 700;
     height: 52px;
+    font-weight: 700;
+    font-size: var(--dk-text-base);
   }
 }
 
-// Éxito
 .order-success {
+  max-width: 440px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 48px 20px;
   text-align: center;
+  padding: 40px 20px;
 
-  .success-icon ion-icon {
-    font-size: 84px;
-    color: #2dd36f;
+  .success-badge-icon ion-icon {
+    font-size: 76px;
+    color: var(--dk-success);
   }
 
   h2 {
-    font-size: 24px;
-    font-weight: 800;
-    color: #1a202c;
-    margin: 14px 0 10px;
+    font-size: clamp(1.35rem, 1.2rem + 0.7vw, 1.7rem);
+    font-weight: 700;
+    color: var(--dk-ink);
+    margin: 12px 0 4px;
   }
 
-  .success-badge {
+  .invoice-ref {
+    font-size: var(--dk-text-sm);
+    font-weight: 700;
+    color: var(--dk-ink-muted);
+    margin: 0 0 16px;
+  }
+
+  .success-tags {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 8px;
     margin-bottom: 16px;
-
-    span {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 700;
-
-      &.badge-type {
-        background: #ebf8ff;
-        color: #2b6cb0;
-      }
-
-      &.badge-pay {
-        background: #f0fff4;
-        color: #276749;
-      }
-    }
   }
 
   .change-notice {
-    background: #fffaf0;
-    border: 1px solid #feebc8;
-    border-radius: 12px;
-    padding: 12px 20px;
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: var(--dk-gold-soft);
+    border: 1px solid #FDE68A;
     margin-bottom: 16px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    gap: 2px;
 
     span {
-      font-size: 13px;
-      color: #7b341e;
+      font-size: var(--dk-text-xs);
+      font-weight: 700;
+      color: var(--dk-gold-ink);
+      text-transform: uppercase;
     }
 
     strong {
-      font-size: 24px;
-      font-weight: 800;
-      color: #c05621;
+      font-size: clamp(1.4rem, 1.25rem + 0.7vw, 1.8rem);
+      color: var(--dk-ink);
     }
   }
 
   .success-message {
-    font-size: 14px;
-    color: #718096;
-    margin-bottom: 28px;
+    font-size: var(--dk-text-sm);
+    color: var(--dk-ink-secondary);
+    margin: 0 0 24px;
+    line-height: 1.5;
   }
 
   .done-button {
     width: 100%;
-    max-width: 320px;
-    --border-radius: 12px;
-    height: 48px;
+    --border-radius: 14px;
+    height: 50px;
     font-weight: 700;
   }
 }

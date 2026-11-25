@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Insumo, InsumoFormData } from '../models/product.model';
+import { CatalogItem } from '../models/catalog.model';
 import { InsumoDeduction } from '../models/order.model';
 import { CartItem } from './cart.service';
 import { SupabaseService } from './supabase.service';
@@ -12,6 +13,7 @@ export class InventoryService {
   private sb = inject(SupabaseService);
 
   private insumos$ = new BehaviorSubject<Insumo[]>([]);
+  private realtimeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.loadInsumos();
@@ -37,34 +39,59 @@ export class InventoryService {
       this.sb.client
         .channel('realtime:insumos')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'insumos' }, () => {
-          this.refresh();
+          this.scheduleRefresh();
         })
         .subscribe();
     } catch {
-      // Ignore if realtime publication is not configured
+      // Ignorar si Realtime no está habilitado para la tabla
     }
   }
 
-  async addInsumo(data: InsumoFormData): Promise<Insumo> {
+  private scheduleRefresh(): void {
+    if (this.realtimeTimer) clearTimeout(this.realtimeTimer);
+    this.realtimeTimer = setTimeout(() => this.refresh(), 150);
+  }
+
+  async addInsumo(data: InsumoFormData): Promise<Insumo | null> {
+    const cleanName = (data.name || '').trim();
+    if (cleanName.length < 2) return null;
+
     const row = {
       id: this.generateId(),
-      name: data.name.trim(),
+      name: cleanName,
       image: data.image || '',
-      stock: Math.max(0, data.stock),
-      low_stock_threshold: Math.max(0, data.lowStockThreshold)
+      stock: Math.max(0, Math.round(Number(data.stock) || 0)),
+      low_stock_threshold: Math.max(0, Math.round(Number(data.lowStockThreshold) || 0))
     };
 
-    await this.sb.client.from('insumos').insert(row);
+    const { data: inserted, error } = await this.sb.client
+      .from('insumos')
+      .insert(row)
+      .select()
+      .single();
+
+    if (error) {
+      return null;
+    }
+
     await this.refresh();
-    return this.mapRow({ ...row, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+    return inserted
+      ? this.mapRow(inserted)
+      : this.mapRow({ ...row, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
   }
 
   async updateInsumo(id: string, data: Partial<InsumoFormData>): Promise<Insumo | null> {
-    const updates: any = { updated_at: new Date().toISOString() };
-    if (data.name !== undefined) updates.name = data.name.trim();
-    if (data.image !== undefined) updates.image = data.image;
-    if (data.stock !== undefined) updates.stock = Math.max(0, data.stock);
-    if (data.lowStockThreshold !== undefined) updates.low_stock_threshold = Math.max(0, data.lowStockThreshold);
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (data.name !== undefined) {
+      const cleanName = data.name.trim();
+      if (cleanName.length < 2) return null;
+      updates['name'] = cleanName;
+    }
+    if (data.image !== undefined) updates['image'] = data.image;
+    if (data.stock !== undefined) updates['stock'] = Math.max(0, Math.round(Number(data.stock) || 0));
+    if (data.lowStockThreshold !== undefined) {
+      updates['low_stock_threshold'] = Math.max(0, Math.round(Number(data.lowStockThreshold) || 0));
+    }
 
     const { data: updated, error } = await this.sb.client
       .from('insumos')
@@ -85,35 +112,84 @@ export class InventoryService {
     return true;
   }
 
+  async adjustStock(insumoId: string, delta: number): Promise<Insumo | null> {
+    const safeDelta = Math.round(delta);
+    if (safeDelta === 0) return this.getInsumoById(insumoId) || null;
+
+    // 1. Intentar ajuste atómico en servidor (evita lost updates concurrentes)
+    const { data: rpcData, error: rpcError } = await this.sb.client.rpc('adjust_insumo_stock_atomic', {
+      p_insumo_id: insumoId,
+      p_delta: safeDelta
+    });
+
+    if (!rpcError && rpcData?.success && rpcData.insumo) {
+      await this.refresh();
+      return this.mapRow(rpcData.insumo);
+    }
+
+    // 2. Fallback leyendo el valor más reciente antes de actualizar
+    const { data: fresh } = await this.sb.client
+      .from('insumos')
+      .select('stock')
+      .eq('id', insumoId)
+      .maybeSingle();
+
+    const baseStock = fresh ? Number(fresh.stock) || 0 : (this.getInsumoById(insumoId)?.stock ?? 0);
+    return this.updateInsumo(insumoId, { stock: Math.max(0, baseStock + safeDelta) });
+  }
+
   async decrementStock(insumoId: string, quantity: number): Promise<boolean> {
     const insumo = this.getInsumoById(insumoId);
     if (!insumo || insumo.stock < quantity) return false;
-    const result = await this.updateInsumo(insumoId, { stock: insumo.stock - quantity });
+    const result = await this.adjustStock(insumoId, -Math.abs(quantity));
     return result !== null;
   }
 
   async incrementStock(insumoId: string, quantity: number): Promise<boolean> {
-    const insumo = this.getInsumoById(insumoId);
-    if (!insumo) return false;
-    const result = await this.updateInsumo(insumoId, { stock: insumo.stock + quantity });
+    const result = await this.adjustStock(insumoId, Math.abs(quantity));
     return result !== null;
   }
 
   findInsumoByName(name: string): Insumo | undefined {
-    const lower = name.toLowerCase().trim();
-    return this.insumos$.value.find(i => i.name.toLowerCase().includes(lower));
-  }
+    const normalized = this.normalizeText(name);
+    if (!normalized) return undefined;
 
-  searchInsumos(term: string): Observable<Insumo[]> {
-    const lower = term.toLowerCase().trim();
-    return this.insumos$.pipe(
-      map(insumos => insumos.filter(i => i.name.toLowerCase().includes(lower)))
-    );
+    const direct = this.insumos$.value.find(i => this.normalizeText(i.name).includes(normalized));
+    if (direct) return direct;
+
+    return this.insumos$.value.find(i => {
+      const insBase = this.normalizeText(i.name).replace(/\([^)]*\)/g, '').trim();
+      return insBase.length >= 4 && normalized.includes(insBase);
+    });
   }
 
   /**
-   * Valida si hay stock suficiente en inventario para todos los productos y adiciones del carrito
+   * Calcula porciones disponibles según receta e inventario.
+   * Si un insumo referenciado en la receta fue eliminado, retorna 0 (coherente con validateCartStock).
    */
+  getProductMaxServings(catalogItem: CatalogItem): number | null {
+    const recipe = catalogItem.insumoRecipe;
+    if (recipe && Array.isArray(recipe) && recipe.length > 0) {
+      let minServings = Infinity;
+      let checkedAny = false;
+
+      for (const r of recipe) {
+        if (!r.insumoId || r.quantity <= 0) continue;
+        checkedAny = true;
+        const insumo = this.getInsumoById(r.insumoId);
+        if (!insumo) {
+          return 0;
+        }
+        minServings = Math.min(minServings, Math.floor(insumo.stock / r.quantity));
+      }
+
+      return checkedAny ? Math.max(0, minServings) : null;
+    }
+
+    const directInsumo = this.findInsumoByName(catalogItem.name);
+    return directInsumo ? Math.max(0, directInsumo.stock) : null;
+  }
+
   validateCartStock(cartItems: CartItem[]): {
     valid: boolean;
     missing: { name: string; available: number; needed: number }[];
@@ -124,19 +200,17 @@ export class InventoryService {
     for (const item of cartItems) {
       const recipe = item.catalogItem.insumoRecipe;
 
-      // 1. Si el producto tiene receta explícita de insumos
       if (recipe && Array.isArray(recipe) && recipe.length > 0) {
         for (const r of recipe) {
-          if (r.insumoId) {
+          if (r.insumoId && r.quantity > 0) {
             const insumo = this.getInsumoById(r.insumoId);
-            const insName = insumo ? insumo.name : 'Insumo';
+            const insName = insumo ? insumo.name : 'Insumo no encontrado';
             const current = deductionMap.get(r.insumoId) || { name: insName, needed: 0 };
-            current.needed += (r.quantity * item.quantity);
+            current.needed += r.quantity * item.quantity;
             deductionMap.set(r.insumoId, current);
           }
         }
       } else {
-        // 2. Si no tiene receta (bebidas como Coca-Cola, etc.), buscar si existe un insumo con nombre coincidente
         const directInsumo = this.findInsumoByName(item.catalogItem.name);
         if (directInsumo) {
           const current = deductionMap.get(directInsumo.id) || { name: directInsumo.name, needed: 0 };
@@ -145,7 +219,6 @@ export class InventoryService {
         }
       }
 
-      // 3. Adición de Queso extra
       if (item.cheeseExtra) {
         const queso = this.findInsumoByName('Queso');
         if (queso) {
@@ -194,13 +267,21 @@ export class InventoryService {
     await this.refresh();
   }
 
+  private normalizeText(value: string): string {
+    return (value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
   private mapRow(row: any): Insumo {
     return {
       id: row.id,
       name: row.name,
       image: row.image || '',
-      stock: row.stock,
-      lowStockThreshold: row.low_stock_threshold,
+      stock: Number(row.stock) || 0,
+      lowStockThreshold: Number(row.low_stock_threshold) || 0,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at)
     };

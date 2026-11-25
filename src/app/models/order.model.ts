@@ -29,6 +29,7 @@ export interface Order {
   customerName: string;
   customerEmail?: string;
   notes: string;
+  cleanNotes?: string;
   paymentMethod: PaymentMethod;
   orderType: OrderType;
   tableNumber?: string;

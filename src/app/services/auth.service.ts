@@ -1,8 +1,19 @@
 import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { User, AuthToken, LoginCredentials, RegisterData, UserRole } from '../models/user.model';
 import { SupabaseService } from './supabase.service';
+
+interface StoredSession extends AuthToken {
+  user?: {
+    id: string;
+    username: string;
+    fullName: string;
+    role: UserRole;
+    createdAt: string;
+  };
+}
+
+const AUTH_STORAGE_KEY = 'auth_token';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -11,14 +22,15 @@ export class AuthService {
 
   private currentUser$ = new BehaviorSubject<User | null>(null);
   private isAuthenticated$ = new BehaviorSubject<boolean>(false);
+  private initPromise: Promise<void>;
 
   constructor() {
-    this.init();
+    this.restoreLocalSessionSync();
+    this.initPromise = this.loadSession();
   }
 
-  private async init(): Promise<void> {
-    await this.ensureDefaultAdmin();
-    await this.loadSession();
+  waitUntilReady(): Promise<void> {
+    return this.initPromise;
   }
 
   get user$(): Observable<User | null> {
@@ -41,114 +53,100 @@ export class AuthService {
     return this.currentUser$.value?.role ?? null;
   }
 
+  isCurrentUser(userId: string): boolean {
+    return this.currentUser$.value?.id === userId;
+  }
+
   async login(credentials: LoginCredentials): Promise<{ success: boolean; message: string }> {
+    const cleanUsername = credentials.username.trim();
+    const cleanPin = credentials.pin.trim();
+
+    if (!cleanUsername || !/^\d{4}$/.test(cleanPin)) {
+      return { success: false, message: 'Ingresa usuario y PIN numérico de 4 dígitos.' };
+    }
+
     try {
-      // 1. Intentar verificación segura vía RPC en PostgreSQL (hash bcrypt)
+      // Verificación exclusivamente vía RPC segura (bcrypt en PostgreSQL, sin descargar PINs al cliente)
       const { data: rpcData, error: rpcError } = await this.sb.client.rpc('verify_user_pin', {
-        p_username: credentials.username.trim(),
-        p_pin: credentials.pin.trim()
+        p_username: cleanUsername,
+        p_pin: cleanPin
       });
 
-      if (!rpcError && rpcData) {
-        if (rpcData.success && rpcData.user) {
-          const user: User = {
-            id: rpcData.user.id,
-            username: rpcData.user.username,
-            fullName: rpcData.user.fullName,
-            role: rpcData.user.role as UserRole,
-            createdAt: new Date(rpcData.user.createdAt)
-          };
-          this.saveSession(user);
-          return { success: true, message: 'Inicio de sesión exitoso.' };
-        }
-        return { success: false, message: rpcData.message || 'Credenciales incorrectas.' };
+      if (rpcError) {
+        return {
+          success: false,
+          message: this.isNetworkError(rpcError.message)
+            ? 'No se pudo conectar con el servidor. Verifica tu conexión o el estado de Supabase.'
+            : 'El servicio de autenticación no está disponible en la base de datos.'
+        };
       }
 
-      // 2. Fallback de transición para compatibilidad previa
-      const { data, error } = await this.sb.client
-        .from('users')
-        .select('*')
-        .ilike('username', credentials.username.trim())
-        .maybeSingle();
-
-      if (error || !data) {
-        return { success: false, message: 'Usuario no encontrado.' };
+      if (rpcData?.success && rpcData.user) {
+        const user: User = {
+          id: rpcData.user.id,
+          username: rpcData.user.username,
+          fullName: rpcData.user.fullName,
+          role: rpcData.user.role as UserRole,
+          createdAt: new Date(rpcData.user.createdAt)
+        };
+        this.saveSession(user);
+        return { success: true, message: `Bienvenido, ${user.fullName}` };
       }
 
-      if (data.pin !== credentials.pin) {
-        return { success: false, message: 'PIN incorrecto.' };
-      }
-
-      const user = this.mapRow(data);
-      this.saveSession(user);
-
-      return { success: true, message: 'Inicio de sesión exitoso.' };
-    } catch (err: any) {
+      return { success: false, message: rpcData?.message || 'Credenciales incorrectas.' };
+    } catch {
       return { success: false, message: 'Error de conexión al iniciar sesión.' };
     }
   }
 
   async register(data: RegisterData): Promise<{ success: boolean; message: string }> {
+    const cleanUsername = data.username.trim();
+    const cleanFullName = data.fullName.trim();
+    const cleanPin = data.pin.trim();
+
+    if (cleanFullName.length < 3 || !/^[a-zA-Z0-9._-]{3,30}$/.test(cleanUsername)) {
+      return {
+        success: false,
+        message: 'Nombre mínimo 3 caracteres y usuario alfanumérico sin espacios (3-30 caracteres).'
+      };
+    }
+    if (!/^\d{4}$/.test(cleanPin)) {
+      return { success: false, message: 'El PIN debe contener exactamente 4 dígitos numéricos.' };
+    }
+
     try {
       const newId = this.generateId();
 
-      // 1. Intentar creación segura mediante RPC (con pgcrypto)
       const { data: rpcData, error: rpcError } = await this.sb.client.rpc('create_user_secure', {
         p_id: newId,
-        p_username: data.username.trim(),
-        p_full_name: data.fullName.trim(),
+        p_username: cleanUsername,
+        p_full_name: cleanFullName,
         p_role: data.role,
-        p_pin: data.pin.trim()
+        p_pin: cleanPin
       });
 
-      if (!rpcError && rpcData) {
+      if (rpcError) {
         return {
-          success: rpcData.success,
-          message: rpcData.message
+          success: false,
+          message: this.isNetworkError(rpcError.message)
+            ? 'Sin conexión con el servidor para registrar el usuario.'
+            : 'No se pudo crear el usuario mediante RPC segura.'
         };
       }
 
-      // 2. Fallback
-      const { data: existing } = await this.sb.client
-        .from('users')
-        .select('id')
-        .ilike('username', data.username)
-        .maybeSingle();
-
-      if (existing) {
-        return { success: false, message: 'El nombre de usuario ya existe.' };
-      }
-
-      const newUser = {
-        id: newId,
-        username: data.username.trim(),
-        full_name: data.fullName.trim(),
-        role: data.role,
-        pin: data.pin.trim()
+      return {
+        success: Boolean(rpcData?.success),
+        message: rpcData?.message || 'Operación completada.'
       };
-
-      const { error } = await this.sb.client.from('users').insert(newUser);
-
-      if (error) {
-        return { success: false, message: 'Error al registrar usuario: ' + error.message };
-      }
-
-      return { success: true, message: 'Usuario registrado exitosamente.' };
     } catch (err: any) {
-      return { success: false, message: err.message || 'Error al registrar usuario.' };
+      return { success: false, message: err?.message || 'Error al registrar usuario.' };
     }
   }
 
   logout(): void {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem(AUTH_STORAGE_KEY);
     this.currentUser$.next(null);
     this.isAuthenticated$.next(false);
-  }
-
-  hasRole(role: UserRole): Observable<boolean> {
-    return this.currentUser$.pipe(
-      map(user => user?.role === role)
-    );
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -163,7 +161,10 @@ export class AuthService {
 
   async updateUserRole(userId: string, newRole: UserRole): Promise<{ success: boolean; message: string }> {
     if (userId === 'usr_admin_default') {
-      return { success: false, message: 'No se puede cambiar el rol del administrador por defecto.' };
+      return { success: false, message: 'No se puede cambiar el rol del administrador principal.' };
+    }
+    if (this.isCurrentUser(userId)) {
+      return { success: false, message: 'No puedes modificar tu propio rol mientras tienes la sesión activa.' };
     }
 
     const { error } = await this.sb.client
@@ -172,14 +173,17 @@ export class AuthService {
       .eq('id', userId);
 
     if (error) {
-      return { success: false, message: 'Error al actualizar rol.' };
+      return { success: false, message: 'Error al actualizar el rol del usuario.' };
     }
-    return { success: true, message: 'Rol actualizado exitosamente.' };
+    return { success: true, message: 'Rol actualizado correctamente.' };
   }
 
   async deleteUser(userId: string): Promise<{ success: boolean; message: string }> {
     if (userId === 'usr_admin_default') {
-      return { success: false, message: 'No se puede eliminar el administrador por defecto.' };
+      return { success: false, message: 'No se puede eliminar el administrador principal.' };
+    }
+    if (this.isCurrentUser(userId)) {
+      return { success: false, message: 'No puedes eliminar tu propio usuario activo.' };
     }
 
     const { error } = await this.sb.client
@@ -188,66 +192,89 @@ export class AuthService {
       .eq('id', userId);
 
     if (error) {
-      return { success: false, message: 'Error al eliminar usuario.' };
+      return { success: false, message: 'Error al eliminar el usuario.' };
     }
-    return { success: true, message: 'Usuario eliminado exitosamente.' };
+    return { success: true, message: 'Usuario eliminado correctamente.' };
   }
 
   private saveSession(user: User): void {
-    const token: AuthToken = {
+    const session: StoredSession = {
       token: 'session_' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2)),
       userId: user.id,
       role: user.role,
-      expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+      expiresAt: Date.now() + (24 * 60 * 60 * 1000),
+      user: {
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        createdAt: user.createdAt.toISOString()
+      }
     };
-    localStorage.setItem('auth_token', JSON.stringify(token));
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
     this.currentUser$.next(user);
     this.isAuthenticated$.next(true);
   }
 
-  private async loadSession(): Promise<void> {
-    const raw = localStorage.getItem('auth_token');
+  private restoreLocalSessionSync(): void {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) return;
 
     try {
-      const token: AuthToken = JSON.parse(raw);
-      if (token.expiresAt <= Date.now()) {
-        localStorage.removeItem('auth_token');
+      const session: StoredSession = JSON.parse(raw);
+      if (session.expiresAt <= Date.now()) {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
         return;
       }
 
-      const { data } = await this.sb.client
-        .from('users')
-        .select('id, username, full_name, role, created_at')
-        .eq('id', token.userId)
-        .maybeSingle();
-
-      if (data) {
-        this.currentUser$.next(this.mapRow(data));
+      if (session.user?.id && session.user.role) {
+        this.currentUser$.next({
+          id: session.user.id,
+          username: session.user.username,
+          fullName: session.user.fullName,
+          role: session.user.role,
+          createdAt: new Date(session.user.createdAt)
+        });
         this.isAuthenticated$.next(true);
-      } else {
-        localStorage.removeItem('auth_token');
       }
     } catch {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem(AUTH_STORAGE_KEY);
     }
   }
 
-  private async ensureDefaultAdmin(): Promise<void> {
-    const { data } = await this.sb.client
-      .from('users')
-      .select('id')
-      .eq('id', 'usr_admin_default')
-      .maybeSingle();
+  private async loadSession(): Promise<void> {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return;
 
-    if (!data) {
-      await this.register({
-        username: 'Admin',
-        fullName: 'Administrador',
-        role: 'admin',
-        pin: '1927'
-      });
+    try {
+      const session: StoredSession = JSON.parse(raw);
+      if (session.expiresAt <= Date.now()) {
+        this.logout();
+        return;
+      }
+
+      const { data, error } = await this.sb.client
+        .from('users')
+        .select('id, username, full_name, role, created_at')
+        .eq('id', session.userId)
+        .maybeSingle();
+
+      if (error) return;
+
+      if (data) {
+        const freshUser = this.mapRow(data);
+        this.saveSession(freshUser);
+      } else {
+        this.logout();
+      }
+    } catch {
+      // Conservar caché si hay corte de red temporal
     }
+  }
+
+  private isNetworkError(message?: string): boolean {
+    const m = (message || '').toLowerCase();
+    return m.includes('failed to fetch') || m.includes('network') || m.includes('err_name_not_resolved') || m.includes('fetch');
   }
 
   private mapRow(row: any): User {

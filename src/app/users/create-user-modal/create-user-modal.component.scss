@@ -1,132 +1,86 @@
 .modal-content {
-  --background: #f5f5f5;
+  --background: var(--dk-bg);
 }
 
 .register-form {
+  max-width: 440px;
+  margin: 0 auto;
   padding: 16px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
-.form-header {
+.pin-block {
   text-align: center;
-  padding: 12px 0 16px;
-
-  ion-icon {
-    font-size: 44px;
-  }
-
-  p {
-    color: #666;
-    font-size: 14px;
-    margin: 6px 0 0;
-  }
-}
-
-.form-list {
-  background: transparent;
-}
-
-.form-item {
-  --background: #fff;
-  --border-radius: 12px;
-  --padding-start: 12px;
-  --padding-end: 16px;
-  margin-bottom: 4px;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-
-  ion-icon[slot="start"] {
-    margin-right: 8px;
-    font-size: 20px;
-  }
-}
-
-.field-error {
-  color: #d32f2f;
-  font-size: 12px;
-  padding: 2px 16px 8px;
-  min-height: 22px;
-}
-
-.pin-section {
-  text-align: center;
-  margin-top: 16px;
-  margin-bottom: 8px;
+  margin: 18px 0 12px;
 
   .pin-label {
-    color: #666;
-    font-size: 14px;
-    margin: 0 0 10px 0;
+    display: block;
+    font-size: var(--dk-text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--dk-ink-secondary);
+    margin-bottom: 10px;
   }
 }
 
 .pin-dots {
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: 14px;
 
   .dot {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    border: 2px solid #ccc;
-    background: transparent;
-    transition: all 0.15s ease;
+    border: 2px solid var(--dk-border-strong);
+    background: var(--dk-surface);
+    transition: transform 0.14s ease, background 0.14s ease, border-color 0.14s ease;
 
     &.filled {
-      background: var(--ion-color-primary);
-      border-color: var(--ion-color-primary);
-      transform: scale(1.15);
+      background: var(--dk-brand);
+      border-color: var(--dk-brand);
+      transform: scale(1.16);
     }
   }
 }
 
 .numpad {
-  width: 100%;
-  max-width: 260px;
+  max-width: 280px;
   margin: 12px auto 0;
-  padding-bottom: env(safe-area-inset-bottom, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .numpad-row {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .numpad-key {
-  width: 68px;
-  height: 50px;
+  min-height: 50px;
   border-radius: 12px;
-  border: 1px solid #ddd;
-  background: #fff;
-  color: #333;
-  font-size: 22px;
-  font-weight: 600;
-  cursor: pointer;
+  border: 1px solid var(--dk-border);
+  background: var(--dk-surface);
+  color: var(--dk-ink);
+  font-size: clamp(1.1rem, 1.02rem + 0.4vw, 1.3rem);
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.1s ease;
+  cursor: pointer;
 
   &:active {
-    background: var(--ion-color-primary);
-    color: #fff;
-    transform: scale(0.93);
+    background: var(--dk-brand);
+    border-color: var(--dk-brand);
+    color: #FFFFFF;
   }
 
-  &.empty {
-    background: transparent;
-    border: none;
-    cursor: default;
-  }
-
-  &.del-key {
-    background: #f0f0f0;
-    border-color: #ddd;
-
-    ion-icon {
-      font-size: 20px;
-    }
+  &.util {
+    background: var(--dk-surface-muted);
+    color: var(--dk-ink-secondary);
+    font-size: 0.95rem;
   }
 }

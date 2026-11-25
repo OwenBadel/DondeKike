@@ -4,16 +4,24 @@ import { map } from 'rxjs/operators';
 import { Order, OrderItem, OrderStatus, InsumoDeduction, PaymentMethod, OrderType } from '../models/order.model';
 import { SupabaseService } from './supabase.service';
 import { InventoryService } from './inventory.service';
+import { InvoiceService } from './invoice.service';
+import {
+  BUSINESS_INFO,
+  buildOrderNotesTag,
+  normalizeCustomerName,
+  parseOrderMetadata
+} from '../utils/order-format.util';
 
 @Injectable({ providedIn: 'root' })
 export class OrderService {
 
   private sb = inject(SupabaseService);
   private inventoryService = inject(InventoryService);
+  private invoiceService = inject(InvoiceService);
 
   private orders$ = new BehaviorSubject<Order[]>([]);
   private processingIds = new Set<string>();
-  private realtimeChannel: any;
+  private realtimeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.loadOrders();
@@ -26,12 +34,16 @@ export class OrderService {
 
   get pendingOrders$(): Observable<Order[]> {
     return this.orders$.pipe(
-      map(orders => orders.filter(o => o.status === 'pending' || o.status === 'in-progress'))
+      map(orders =>
+        orders
+          .filter(o => o.status === 'pending' || o.status === 'in-progress')
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      )
     );
   }
 
-  get completedOrders$(): Observable<Order[]> {
-    return this.orders$.pipe(
+  get todayCompletedOrders$(): Observable<Order[]> {
+    return this.getTodayOrders().pipe(
       map(orders => orders.filter(o => o.status === 'completed'))
     );
   }
@@ -42,11 +54,10 @@ export class OrderService {
 
   private initRealtime(): void {
     try {
-      this.realtimeChannel = this.sb.client
+      this.sb.client
         .channel('realtime:orders')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-          this.refresh();
-          this.inventoryService.refresh();
+          this.scheduleRealtimeRefresh();
         })
         .subscribe();
     } catch {
@@ -54,9 +65,14 @@ export class OrderService {
     }
   }
 
-  /**
-   * Creación transaccional y atómica de pedido con método de pago y tipo de orden
-   */
+  private scheduleRealtimeRefresh(): void {
+    if (this.realtimeTimer) clearTimeout(this.realtimeTimer);
+    this.realtimeTimer = setTimeout(() => {
+      this.refresh();
+      this.inventoryService.refresh();
+    }, 150);
+  }
+
   async createOrderAtomic(
     items: OrderItem[],
     subtotal: number,
@@ -73,55 +89,85 @@ export class OrderService {
     cashChange: number = 0,
     taxRate: number = 0,
     businessInfo: any = {
-      businessName: 'Donde Kike',
-      businessAddress: 'Av. Principal #123, Ciudad',
-      businessPhone: '+1 (555) 123-4567'
+      businessName: BUSINESS_INFO.businessName,
+      businessAddress: BUSINESS_INFO.businessAddress,
+      businessPhone: BUSINESS_INFO.businessPhone
     }
   ): Promise<{ success: boolean; order?: Order; invoice?: any; message?: string }> {
+    if (!items || items.length === 0) {
+      return { success: false, message: 'No es posible registrar un pedido vacío.' };
+    }
+
     const orderId = this.generateId();
+    const cleanCustomerName = normalizeCustomerName(customerName);
+    const cleanTable = orderType === 'Comer Aquí' ? tableNumber.trim() : '';
+    const fullNotes = buildOrderNotesTag(
+      orderType,
+      paymentMethod,
+      cleanTable,
+      cashReceived,
+      cashChange,
+      notes
+    );
 
-    const cleanCustomerName = (customerName?.trim() && customerName.trim().toLowerCase() !== 'sin nombre')
-      ? customerName.trim()
-      : 'Cliente Mostrador';
-
-    // Etiqueta estructurada para notas
-    const metaTag = `[${orderType}] [${paymentMethod}]` +
-      (cashReceived > 0 ? ` [Recibido: $${cashReceived.toLocaleString()} | Cambio: $${cashChange.toLocaleString()}]` : '');
-    const fullNotes = notes ? `${metaTag} - ${notes}` : metaTag;
+    const basePayload = {
+      p_order_id: orderId,
+      p_items: items,
+      p_subtotal: Math.max(0, Math.round(subtotal)),
+      p_tax: Math.max(0, Math.round(tax)),
+      p_total: Math.max(0, Math.round(total)),
+      p_customer_name: cleanCustomerName,
+      p_customer_email: '',
+      p_notes: fullNotes,
+      p_created_by: createdBy,
+      p_deductions: insumoDeductions,
+      p_tax_rate: taxRate,
+      p_business_info: businessInfo
+    };
 
     try {
-      // 1. Intentar RPC atómica si está disponible
-      const { data: rpcData, error: rpcError } = await this.sb.client.rpc('create_order_atomic', {
-        p_order_id: orderId,
-        p_items: items,
-        p_subtotal: subtotal,
-        p_tax: tax,
-        p_total: total,
-        p_customer_name: cleanCustomerName,
-        p_customer_email: '',
-        p_notes: fullNotes,
-        p_created_by: createdBy,
-        p_deductions: insumoDeductions,
-        p_tax_rate: taxRate,
-        p_business_info: businessInfo
+      // 1. RPC atómica con firma completa de 15 parámetros
+      let { data: rpcData, error: rpcError } = await this.sb.client.rpc('create_order_atomic', {
+        ...basePayload,
+        p_payment_method: paymentMethod,
+        p_order_type: orderType,
+        p_table_number: cleanTable
       });
+
+      // Respaldo para instancias previas con firma de 12 parámetros
+      if (rpcError && (rpcError.code === 'PGRST202' || (rpcError.message || '').includes('Could not find the function'))) {
+        const legacyRes = await this.sb.client.rpc('create_order_atomic', basePayload);
+        rpcData = legacyRes.data;
+        rpcError = legacyRes.error;
+        if (!rpcError && rpcData?.success) {
+          await this.syncOrderMetadataColumns(orderId, paymentMethod, orderType, cleanTable);
+        }
+      }
 
       if (!rpcError && rpcData) {
         if (rpcData.success) {
           await this.refresh();
           await this.inventoryService.refresh();
+          await this.invoiceService.refresh();
+
+          const mappedOrder = this.mapRow({
+            ...rpcData.order,
+            payment_method: paymentMethod,
+            order_type: orderType,
+            table_number: cleanTable
+          });
+
           return {
             success: true,
-            order: this.mapRow(rpcData.order),
+            order: mappedOrder,
             invoice: rpcData.invoice
           };
-        } else {
-          // El RPC de Supabase rechazó por stock insuficiente u otra causa
-          return {
-            success: false,
-            message: rpcData.message || 'No se pudo crear el pedido por falta de stock.'
-          };
         }
+
+        return {
+          success: false,
+          message: rpcData.message || 'No se pudo crear el pedido por falta de stock.'
+        };
       }
 
       if (rpcError) {
@@ -131,14 +177,46 @@ export class OrderService {
         }
       }
 
-      // 2. Fallback con numeración secuencial y validación estricta de stock
-      const fallbackResult = await this.createOrderFallback(
-        orderId, items, subtotal, tax, total, cleanCustomerName, fullNotes, createdBy, insumoDeductions,
-        paymentMethod, orderType, tableNumber, cashReceived, cashChange
+      // 2. Fallback transaccional controlado
+      return await this.createOrderFallback(
+        orderId,
+        items,
+        Math.max(0, Math.round(subtotal)),
+        Math.max(0, Math.round(tax)),
+        Math.max(0, Math.round(total)),
+        cleanCustomerName,
+        fullNotes,
+        createdBy,
+        insumoDeductions,
+        paymentMethod,
+        orderType,
+        cleanTable,
+        cashReceived,
+        cashChange,
+        taxRate
       );
-      return fallbackResult;
     } catch (err: any) {
-      return { success: false, message: err.message || 'Error inesperado al crear el pedido.' };
+      return { success: false, message: err?.message || 'Error inesperado al crear el pedido.' };
+    }
+  }
+
+  private async syncOrderMetadataColumns(
+    orderId: string,
+    paymentMethod: PaymentMethod,
+    orderType: OrderType,
+    tableNumber: string
+  ): Promise<void> {
+    try {
+      await this.sb.client
+        .from('orders')
+        .update({
+          payment_method: paymentMethod,
+          order_type: orderType,
+          table_number: tableNumber
+        })
+        .eq('id', orderId);
+    } catch {
+      // Columnas opcionales ya respaldadas en notes
     }
   }
 
@@ -156,9 +234,9 @@ export class OrderService {
     orderType: OrderType,
     tableNumber: string,
     cashReceived: number,
-    cashChange: number
-  ): Promise<{ success: boolean; order?: Order; message?: string }> {
-    // 1. Validar stock antes de crear la orden
+    cashChange: number,
+    taxRate: number
+  ): Promise<{ success: boolean; order?: Order; invoice?: any; message?: string }> {
     for (const d of insumoDeductions) {
       const insumo = this.inventoryService.getInsumoById(d.insumoId);
       if (insumo && insumo.stock < d.quantity) {
@@ -171,19 +249,22 @@ export class OrderService {
 
     const orderNumber = await this.getNextOrderNumber();
 
-    const row: any = {
+    const row: Record<string, unknown> = {
       id: orderId,
       order_number: orderNumber,
-      items: JSON.stringify(items),
+      items,
       subtotal,
       tax,
       total,
       status: 'pending',
       customer_name: customerName,
       customer_email: '',
+      payment_method: paymentMethod,
+      order_type: orderType,
+      table_number: tableNumber,
       notes,
       created_by: createdBy,
-      insumo_deductions: JSON.stringify(insumoDeductions)
+      insumo_deductions: insumoDeductions
     };
 
     const { error: insertError } = await this.sb.client.from('orders').insert(row);
@@ -191,42 +272,33 @@ export class OrderService {
       return { success: false, message: insertError.message || 'Error al registrar el pedido.' };
     }
 
-    // 2. Descontar stock de insumos en fallback
     for (const d of insumoDeductions) {
       await this.inventoryService.decrementStock(d.insumoId, d.quantity);
     }
 
+    const order: Order = this.mapRow({
+      ...row,
+      cash_received: cashReceived,
+      cash_change: cashChange,
+      created_at: new Date().toISOString()
+    });
+
+    const invoice = await this.invoiceService.generateInvoice(order, taxRate);
+
     await this.refresh();
     await this.inventoryService.refresh();
 
-    const order: Order = {
-      id: orderId,
-      orderNumber,
-      items,
-      subtotal,
-      tax,
-      total,
-      status: 'pending',
-      customerName,
-      customerEmail: '',
-      notes,
-      paymentMethod,
-      orderType,
-      tableNumber,
-      cashReceived,
-      cashChange,
-      createdAt: new Date(),
-      createdBy,
-      insumoDeductions
+    return {
+      success: true,
+      order,
+      invoice: invoice ? { invoice_number: invoice.invoiceNumber } : undefined
     };
-
-    return { success: true, order };
   }
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order | null> {
-    const updates: any = { status };
+    const updates: Record<string, unknown> = { status };
     if (status === 'completed') {
-      updates.completed_at = new Date().toISOString();
+      updates['completed_at'] = new Date().toISOString();
     }
 
     const { error } = await this.sb.client
@@ -240,45 +312,21 @@ export class OrderService {
   }
 
   async cancelOrder(orderId: string): Promise<boolean> {
-    if (this.processingIds.has(orderId)) return false;
-    this.processingIds.add(orderId);
-
-    try {
-      const { data: rpcData, error } = await this.sb.client.rpc('cancel_order_atomic', {
-        p_order_id: orderId,
-        p_new_status: 'cancelled'
-      });
-
-      if (!error && rpcData?.success) {
-        await this.refresh();
-        await this.inventoryService.refresh();
-        return true;
-      }
-
-      const order = this.getOrderById(orderId);
-      if (!order || order.status === 'cancelled' || order.status === 'reversed') return false;
-
-      if (order.insumoDeductions && order.insumoDeductions.length > 0) {
-        for (const deduction of order.insumoDeductions) {
-          await this.inventoryService.incrementStock(deduction.insumoId, deduction.quantity);
-        }
-      }
-
-      const result = await this.updateOrderStatus(orderId, 'cancelled');
-      return result !== null;
-    } finally {
-      this.processingIds.delete(orderId);
-    }
+    return this.cancelOrReverseOrder(orderId, 'cancelled');
   }
 
   async reverseOrder(orderId: string): Promise<boolean> {
+    return this.cancelOrReverseOrder(orderId, 'reversed');
+  }
+
+  private async cancelOrReverseOrder(orderId: string, targetStatus: 'cancelled' | 'reversed'): Promise<boolean> {
     if (this.processingIds.has(orderId)) return false;
     this.processingIds.add(orderId);
 
     try {
       const { data: rpcData, error } = await this.sb.client.rpc('cancel_order_atomic', {
         p_order_id: orderId,
-        p_new_status: 'reversed'
+        p_new_status: targetStatus
       });
 
       if (!error && rpcData?.success) {
@@ -289,14 +337,18 @@ export class OrderService {
 
       const order = this.getOrderById(orderId);
       if (!order || order.status === 'cancelled' || order.status === 'reversed') return false;
+      if (targetStatus === 'cancelled' && order.status === 'completed') return false;
+      if (targetStatus === 'reversed' && order.status !== 'completed') return false;
 
       if (order.insumoDeductions && order.insumoDeductions.length > 0) {
         for (const deduction of order.insumoDeductions) {
-          await this.inventoryService.incrementStock(deduction.insumoId, deduction.quantity);
+          if (deduction.quantity > 0) {
+            await this.inventoryService.incrementStock(deduction.insumoId, deduction.quantity);
+          }
         }
       }
 
-      const result = await this.updateOrderStatus(orderId, 'reversed');
+      const result = await this.updateOrderStatus(orderId, targetStatus);
       return result !== null;
     } finally {
       this.processingIds.delete(orderId);
@@ -344,38 +396,42 @@ export class OrderService {
     );
   }
 
-  getRevenueByDate(date: Date): Observable<number> {
-    return this.getOrdersByDate(date).pipe(
-      map(orders => orders.reduce((sum, o) => sum + o.total, 0))
-    );
-  }
-
-  /**
-   * Resumen y Cierre de Caja por Métodos de Pago (Efectivo y Transferencia)
-   */
   getCashRegisterSummary(date: Date): Observable<{
     totalSales: number;
     orderCount: number;
+    averageTicket: number;
     efectivo: number;
     transferencia: number;
+    efectivoCount: number;
+    transferenciaCount: number;
   }> {
     return this.getOrdersByDate(date).pipe(
       map(orders => {
         const summary = {
           totalSales: 0,
           orderCount: orders.length,
+          averageTicket: 0,
           efectivo: 0,
-          transferencia: 0
+          transferencia: 0,
+          efectivoCount: 0,
+          transferenciaCount: 0
         };
 
         for (const o of orders) {
           summary.totalSales += o.total;
           if (o.paymentMethod === 'Transferencia') {
             summary.transferencia += o.total;
+            summary.transferenciaCount++;
           } else {
             summary.efectivo += o.total;
+            summary.efectivoCount++;
           }
         }
+
+        summary.averageTicket = summary.orderCount > 0
+          ? Math.round(summary.totalSales / summary.orderCount)
+          : 0;
+
         return summary;
       })
     );
@@ -417,24 +473,16 @@ export class OrderService {
 
   private async getNextOrderNumber(): Promise<number> {
     const { data } = await this.sb.client
-      .from('counters')
-      .select('value')
-      .eq('key', 'order_counter')
+      .from('orders')
+      .select('order_number')
+      .order('order_number', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
-    const current = data?.value || 0;
-    const next = current + 1;
-
-    await this.sb.client
-      .from('counters')
-      .upsert({ key: 'order_counter', value: next });
-
-    return next;
+    const maxFromDb = Number(data?.order_number) || 0;
+    const maxFromLocal = this.orders$.value.reduce((max, o) => Math.max(max, o.orderNumber || 0), 0);
+    return Math.max(maxFromDb, maxFromLocal) + 1;
   }
-
-  // =============================================
-  // MAPEO DE DATOS
-  // =============================================
 
   private mapRow(row: any): Order {
     let items: OrderItem[] = [];
@@ -451,49 +499,25 @@ export class OrderService {
       deductions = row.insumo_deductions;
     }
 
-    const rawNotes = row.notes || '';
-
-    // Extraer método de pago y tipo de orden de las notas o columnas
-    let paymentMethod: PaymentMethod = (row.payment_method as PaymentMethod) || 'Efectivo';
-    let orderType: OrderType = (row.order_type as OrderType) || 'Comer Aquí';
-    const tableNumber = row.table_number || '';
-    const cashReceived = row.cash_received || 0;
-    let cashChange = row.cash_change || 0;
-
-    // Si no estaban en columnas dedicadas, extraer de las notas
-    if (rawNotes.includes('[Transferencia]') || rawNotes.includes('[Nequi]') || rawNotes.includes('[Daviplata]') || rawNotes.includes('[Tarjeta]')) {
-      paymentMethod = 'Transferencia';
-    } else {
-      paymentMethod = 'Efectivo';
-    }
-
-    if (rawNotes.includes('[Para Llevar]')) {
-      orderType = 'Para Llevar';
-    } else {
-      orderType = 'Comer Aquí';
-    }
-
-    const changeMatch = rawNotes.match(/Cambio:\s*\$([0-9.,]+)/i);
-    if (changeMatch) {
-      cashChange = parseInt(changeMatch[1].replace(/[^0-9]/g, ''), 10) || 0;
-    }
+    const meta = parseOrderMetadata(row);
 
     return {
       id: row.id,
-      orderNumber: row.order_number,
+      orderNumber: Number(row.order_number) || 0,
       items,
-      subtotal: row.subtotal,
-      tax: row.tax || 0,
-      total: row.total,
+      subtotal: Number(row.subtotal) || 0,
+      tax: Number(row.tax) || 0,
+      total: Number(row.total) || 0,
       status: row.status as OrderStatus,
-      customerName: (row.customer_name?.trim() && row.customer_name.trim().toLowerCase() !== 'sin nombre') ? row.customer_name.trim() : 'Cliente Mostrador',
-      customerEmail: '',
-      notes: rawNotes,
-      paymentMethod,
-      orderType,
-      tableNumber,
-      cashReceived,
-      cashChange,
+      customerName: normalizeCustomerName(row.customer_name),
+      customerEmail: row.customer_email || '',
+      notes: row.notes || '',
+      cleanNotes: meta.cleanNotes,
+      paymentMethod: meta.paymentMethod,
+      orderType: meta.orderType,
+      tableNumber: meta.tableNumber,
+      cashReceived: meta.cashReceived,
+      cashChange: meta.cashChange,
       createdAt: new Date(row.created_at),
       completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
       createdBy: row.created_by || '',

@@ -1,8 +1,8 @@
 {
-  "name": "inventariado",
-  "version": "0.0.1",
-  "author": "Ionic Framework",
-  "homepage": "https://ionicframework.com/",
+  "name": "donde-kike-pos",
+  "version": "1.2.0",
+  "author": "Owen Badel Hooker",
+  "homepage": "https://github.com/OwenBadel/DondeKike",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -12,6 +12,7 @@
     "android": "ng build --configuration production && npx cap sync android && npx cap open android",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:ci": "ng test --watch=false --browsers=ChromeHeadless",
     "lint": "ng lint"
   },
   "private": true,
@@ -27,13 +28,13 @@
     "@capacitor/android": "^8.1.0",
     "@capacitor/app": "8.0.1",
     "@capacitor/camera": "^8.0.1",
-    "@capacitor/core": "8.1.0",
+    "@capacitor/core": "^8.1.0",
     "@capacitor/filesystem": "^8.1.2",
     "@capacitor/haptics": "8.0.0",
     "@capacitor/keyboard": "8.0.0",
     "@capacitor/local-notifications": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
-    "@capacitor/status-bar": "8.0.1",
+    "@capacitor/status-bar": "^8.0.1",
     "@ionic/angular": "^8.0.0",
     "@supabase/supabase-js": "^2.97.0",
     "chart.js": "^4.5.1",
@@ -71,5 +72,5 @@
     "karma-jasmine-html-reporter": "~2.1.0",
     "typescript": "~5.9.0"
   },
-  "description": "An Ionic project"
+  "description": "Sistema POS, comandas en tiempo real (KDS) y control de inventario para Donde Kike."
 }

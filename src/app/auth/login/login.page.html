@@ -1,58 +1,68 @@
-<ion-content class="login-content" [scrollY]="false">
-  <div class="login-container">
-    <div class="login-header">
-      <img src="assets/media/logo.jpeg" alt="Donde Kike" class="logo-img" />
-      <h1>Donde Kike</h1>
-    </div>
-
-    <!-- Campo de usuario -->
-    <div class="username-section">
-      <ion-item lines="none" class="username-item">
-        <ion-icon name="person-outline" slot="start"></ion-icon>
-        <ion-input
-          [(ngModel)]="username"
-          type="text"
-          placeholder="Nombre de usuario"
-          autocapitalize="off"
-          autocomplete="off"
-          (ionFocus)="showError = false">
-        </ion-input>
-      </ion-item>
-    </div>
-
-    <!-- PIN dots -->
-    <div class="pin-section">
-      <p class="pin-label">Ingresa tu PIN</p>
-      <div class="pin-dots">
-        <div *ngFor="let dot of pinDots" class="dot" [class.filled]="dot"></div>
+<ion-content class="login-content" [scrollY]="true">
+  <div class="login-shell">
+    <div class="login-card">
+      <div class="brand-header">
+        <div class="logo-ring">
+          <img src="assets/media/logo.jpeg" alt="Donde Kike — La esquina del sabor" class="logo-img" />
+        </div>
+        <h1>Donde Kike</h1>
+        <p class="tagline">La esquina del sabor · Punto de Venta</p>
       </div>
-    </div>
 
-    <!-- Error -->
-    <div class="error-box" *ngIf="showError">
-      <ion-icon name="alert-circle-outline"></ion-icon>
-      {{ errorMessage }}
-    </div>
-
-    <!-- Teclado numérico -->
-    <div class="numpad">
-      <div class="numpad-row" *ngFor="let row of numpadKeys">
-        <button
-          *ngFor="let key of row"
-          class="numpad-key"
-          [class.empty]="key === ''"
-          [class.del-key]="key === 'del'"
-          [disabled]="key === '' || isLoading"
-          (click)="onKeyPress(key)">
-          <ion-icon *ngIf="key === 'del'" name="backspace-outline"></ion-icon>
-          <span *ngIf="key !== 'del'">{{ key }}</span>
-        </button>
+      <!-- Usuario -->
+      <div class="field-block">
+        <label class="field-label" for="login-username">Usuario</label>
+        <div class="input-wrapper">
+          <ion-icon name="person-outline"></ion-icon>
+          <ion-input
+            id="login-username"
+            [(ngModel)]="username"
+            type="text"
+            placeholder="Ej: Admin, Mesero..."
+            autocapitalize="off"
+            autocomplete="username"
+            enterkeyhint="next"
+            (ionFocus)="showError = false">
+          </ion-input>
+        </div>
       </div>
-    </div>
 
-    <!-- Loading -->
-    <div class="loading-indicator" *ngIf="isLoading">
-      <ion-spinner name="crescent" color="light"></ion-spinner>
+      <!-- Indicador PIN -->
+      <div class="pin-block">
+        <span class="field-label">PIN de acceso (4 dígitos)</span>
+        <div class="pin-dots" [class.shake]="shakeDots" aria-label="Indicador de dígitos del PIN">
+          <div *ngFor="let dot of pinDots" class="dot" [class.filled]="dot"></div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div class="error-banner" *ngIf="showError" role="alert">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <!-- Teclado numérico táctil -->
+      <div class="numpad" role="group" aria-label="Teclado numérico de PIN">
+        <div class="numpad-row" *ngFor="let row of numpadKeys">
+          <button
+            *ngFor="let key of row"
+            type="button"
+            class="numpad-key"
+            [class.util-key]="key === 'del' || key === 'clear'"
+            [disabled]="isLoading"
+            [attr.aria-label]="key === 'del' ? 'Borrar dígito' : key === 'clear' ? 'Limpiar PIN' : 'Dígito ' + key"
+            (click)="onKeyPress(key)">
+            <ion-icon *ngIf="key === 'del'" name="backspace-outline"></ion-icon>
+            <span *ngIf="key === 'clear'" class="clear-text">C</span>
+            <span *ngIf="key !== 'del' && key !== 'clear'" class="dk-mono">{{ key }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="loading-bar" *ngIf="isLoading">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+        <span>Verificando acceso...</span>
+      </div>
     </div>
   </div>
 </ion-content>

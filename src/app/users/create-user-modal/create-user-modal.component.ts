@@ -3,7 +3,9 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ModalController } from '@ionic/angular';
 import { AuthService } from '../../services/auth.service';
 import { AlertService } from '../../services/alert.service';
+import { HapticsService } from '../../services/haptics.service';
 import { UserRole } from '../../models/user.model';
+import { trimmedMinLength, trimmedRequired } from '../../utils/form-validators.util';
 
 @Component({
   selector: 'app-create-user-modal',
@@ -17,14 +19,16 @@ export class CreateUserModalComponent implements OnInit {
   private authService = inject(AuthService);
   private modalCtrl = inject(ModalController);
   private alertService = inject(AlertService);
+  private haptics = inject(HapticsService);
 
   registerForm!: FormGroup;
   pin = '';
   pinDots = [false, false, false, false];
+  isSubmitting = false;
 
   roles: { value: UserRole; label: string }[] = [
     { value: 'admin', label: 'Administrador' },
-    { value: 'waiter', label: 'Mesero' },
+    { value: 'waiter', label: 'Mesero / Caja' },
     { value: 'kitchen', label: 'Cocina' }
   ];
 
@@ -32,19 +36,25 @@ export class CreateUserModalComponent implements OnInit {
     ['1', '2', '3'],
     ['4', '5', '6'],
     ['7', '8', '9'],
-    ['', '0', 'del']
+    ['clear', '0', 'del']
   ];
 
   ngOnInit(): void {
     this.registerForm = this.fb.group({
-      fullName: ['', [Validators.required, Validators.minLength(3)]],
-      username: ['', [Validators.required, Validators.minLength(3)]],
+      fullName: ['', [trimmedRequired(), trimmedMinLength(3), Validators.maxLength(60)]],
+      username: ['', [trimmedRequired(), Validators.pattern(/^[a-zA-Z0-9._-]{3,30}$/)]],
       role: ['waiter', [Validators.required]]
     });
   }
 
   onKeyPress(key: string): void {
-    if (key === '') return;
+    if (!key || this.isSubmitting) return;
+    this.haptics.tap();
+
+    if (key === 'clear') {
+      this.clearPin();
+      return;
+    }
 
     if (key === 'del') {
       if (this.pin.length > 0) {
@@ -58,16 +68,19 @@ export class CreateUserModalComponent implements OnInit {
   }
 
   async onRegister(): Promise<void> {
+    if (this.isSubmitting) return;
+
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();
       return;
     }
 
     if (this.pin.length !== 4) {
-      this.alertService.toast('El PIN debe ser de 4 dígitos', 'warning');
+      this.alertService.toast('El PIN debe tener exactamente 4 dígitos', 'warning');
       return;
     }
 
+    this.isSubmitting = true;
     const formValue = this.registerForm.value;
 
     const result = await this.authService.register({
@@ -77,9 +90,11 @@ export class CreateUserModalComponent implements OnInit {
       role: formValue.role
     });
 
+    this.isSubmitting = false;
     this.alertService.toast(result.message, result.success ? 'success' : 'error');
 
     if (result.success) {
+      this.haptics.success();
       this.modalCtrl.dismiss({ created: true });
     }
   }
@@ -102,9 +117,14 @@ export class CreateUserModalComponent implements OnInit {
     if (!control?.touched || control.valid) return '';
 
     if (control.hasError('required')) return 'Campo requerido';
+    if (control.hasError('pattern')) return 'Solo letras, números, . _ - (3-30 sin espacios)';
     if (control.hasError('minlength')) {
       const min = control.getError('minlength').requiredLength;
       return `Mínimo ${min} caracteres`;
+    }
+    if (control.hasError('maxlength')) {
+      const max = control.getError('maxlength').requiredLength;
+      return `Máximo ${max} caracteres`;
     }
     return '';
   }

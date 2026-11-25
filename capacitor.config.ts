@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.dondekike.pos',
-  appName: 'Donde Kike',
+  appName: 'Donde Kike POS',
   webDir: 'www',
   server: {
     androidScheme: 'https'
@@ -13,12 +13,12 @@ const config: CapacitorConfig = {
     },
     LocalNotifications: {
       smallIcon: 'ic_stat_icon',
-      iconColor: '#2dd36f'
+      iconColor: '#D9480F'
     },
     SplashScreen: {
       launchAutoHide: true,
-      launchShowDuration: 2000,
-      backgroundColor: '#ff6b35',
+      launchShowDuration: 1800,
+      backgroundColor: '#1C1917',
       showSpinner: false
     }
   }

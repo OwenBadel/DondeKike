@@ -1,160 +1,170 @@
 <ion-header class="ion-no-border">
-  <ion-toolbar color="primary">
+  <ion-toolbar class="dk-modal-toolbar">
     <ion-buttons slot="start">
-      <ion-button (click)="close()">
+      <ion-button (click)="close()" aria-label="Cerrar">
         <ion-icon name="close" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>{{ orderCompleted ? '¡Pedido Confirmado!' : 'Cobrar Pedido' }}</ion-title>
+    <ion-title>{{ orderCompleted ? 'Comanda Confirmada' : 'Cobrar Pedido' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="checkout-content">
 
-  <!-- Vista de pedido completado -->
+  <!-- Confirmación de pedido -->
   <div class="order-success" *ngIf="orderCompleted">
-    <div class="success-icon">
+    <div class="success-badge-icon">
       <ion-icon name="checkmark-circle"></ion-icon>
     </div>
-    <h2>¡Pedido #{{ orderNumber }} Enviado!</h2>
-    <div class="success-badge">
-      <span class="badge-type">{{ orderType }}</span>
-      <span class="badge-pay">{{ paymentMethod }}</span>
-    </div>
-    <div class="change-notice" *ngIf="paymentMethod === 'Efectivo' && cashChange > 0">
-      <span>Vueltas a entregar:</span>
-      <strong>${{ cashChange | number:'1.0-0' }}</strong>
-    </div>
-    <p class="success-message">La comanda ya está visible en la pantalla de cocina.</p>
+    <h2>Pedido #{{ orderNumber }} enviado</h2>
+    <p class="invoice-ref dk-mono">{{ invoiceNumber }} · ${{ completedTotal | number:'1.0-0' }}</p>
 
-    <ion-button expand="block" (click)="close()" class="done-button" color="primary">
-      <ion-icon name="checkmark-outline" slot="start"></ion-icon>
-      Entendido / Nueva Orden
+    <div class="success-tags">
+      <span class="dk-pill info">{{ orderType }}</span>
+      <span class="dk-pill neutral" *ngIf="completedTableNumber">
+        Mesa {{ completedTableNumber }}
+      </span>
+      <span class="dk-pill success">{{ paymentMethod }}</span>
+    </div>
+
+    <div class="change-notice" *ngIf="paymentMethod === 'Efectivo' && completedCashChange > 0">
+      <span>Cambio a entregar</span>
+      <strong class="dk-mono">${{ completedCashChange | number:'1.0-0' }}</strong>
+    </div>
+
+    <p class="success-message">La comanda ya está activa en el monitor de cocina y el inventario fue descontado.</p>
+
+    <ion-button expand="block" color="primary" (click)="close()" class="done-button">
+      <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+      Nueva Orden
     </ion-button>
   </div>
 
-  <!-- Formulario de checkout -->
-  <div class="checkout-form-container" *ngIf="!orderCompleted">
-    
-    <!-- 1. Resumen de Total a Pagar -->
+  <!-- Formulario de cobro -->
+  <div class="checkout-container" *ngIf="!orderCompleted">
     <div class="hero-total-card">
-      <span class="hero-label">Total a Cobrar</span>
-      <span class="hero-amount">${{ (total$ | async) | number:'1.0-0' }}</span>
+      <div class="hero-meta">
+        <span class="hero-label">Total a cobrar</span>
+        <strong class="hero-amount dk-mono">${{ currentTotal | number:'1.0-0' }}</strong>
+      </div>
+      <div class="hero-items" *ngIf="cartItems$ | async as items">
+        <span class="hero-item-chip" *ngFor="let item of items">
+          {{ item.quantity }}x {{ getCleanName(item) }}<ng-container *ngIf="item.cheeseExtra"> (+Queso)</ng-container>
+        </span>
+      </div>
     </div>
 
-    <!-- 2. Tipo de Pedido -->
-    <h3 class="section-label">1. Tipo de Pedido</h3>
-    <div class="selector-chips">
-      <ion-chip
+    <!-- 1. Tipo de despacho -->
+    <h3 class="dk-section-heading">1. Modalidad de entrega</h3>
+    <div class="toggle-grid">
+      <button
+        type="button"
+        class="option-btn"
         *ngFor="let type of orderTypes"
-        [color]="orderType === type ? 'primary' : 'medium'"
-        (click)="setOrderType(type)"
-        [outline]="orderType !== type"
-        class="action-chip">
+        [class.active]="orderType === type"
+        (click)="setOrderType(type)">
         <ion-icon [name]="type === 'Comer Aquí' ? 'restaurant-outline' : 'bag-handle-outline'"></ion-icon>
-        <ion-label>{{ type }}</ion-label>
-      </ion-chip>
+        <span>{{ type }}</span>
+      </button>
     </div>
 
-    <!-- 3. Método de Pago -->
-    <h3 class="section-label">2. Método de Pago</h3>
-    <div class="selector-chips">
-      <ion-chip
-        *ngFor="let method of paymentMethods"
-        [color]="paymentMethod === method ? 'success' : 'medium'"
-        (click)="setPaymentMethod(method)"
-        [outline]="paymentMethod !== method"
-        class="action-chip">
-        <ion-icon [name]="method === 'Efectivo' ? 'cash-outline' : 'phone-portrait-outline'"></ion-icon>
-        <ion-label>{{ method }}</ion-label>
-      </ion-chip>
-    </div>
-
-    <!-- Calculadora de Vueltas (solo para Efectivo) -->
-    <div class="cash-calculator-card" *ngIf="paymentMethod === 'Efectivo'">
-      <div class="calc-header">
-        <ion-icon name="calculator-outline" color="success"></ion-icon>
-        <span>Calculadora de Cambio</span>
+    <form [formGroup]="checkoutForm">
+      <div class="table-field" *ngIf="orderType === 'Comer Aquí'">
+        <ion-item lines="none" class="dk-form-item">
+          <ion-label position="stacked">Mesa o referencia (opcional)</ion-label>
+          <ion-input formControlName="tableNumber" placeholder="Ej: Mesa 4, Barra..."></ion-input>
+        </ion-item>
       </div>
 
-      <div class="quick-cash-buttons">
+      <!-- 2. Método de pago -->
+      <h3 class="dk-section-heading">2. Método de pago</h3>
+      <div class="toggle-grid">
         <button
           type="button"
-          class="quick-btn"
-          [class.active]="selectedCashOption === 'exact'"
-          (click)="setExactCash()">
-          Exacto
-        </button>
-        <button
-          type="button"
-          class="quick-btn"
-          [class.active]="selectedCashOption === 20000"
-          (click)="setQuickCash(20000)">
-          $20.000
-        </button>
-        <button
-          type="button"
-          class="quick-btn"
-          [class.active]="selectedCashOption === 50000"
-          (click)="setQuickCash(50000)">
-          $50.000
-        </button>
-        <button
-          type="button"
-          class="quick-btn"
-          [class.active]="selectedCashOption === 100000"
-          (click)="setQuickCash(100000)">
-          $100.000
+          class="option-btn pay"
+          *ngFor="let method of paymentMethods"
+          [class.active]="paymentMethod === method"
+          (click)="setPaymentMethod(method)">
+          <ion-icon [name]="method === 'Efectivo' ? 'cash-outline' : 'phone-portrait-outline'"></ion-icon>
+          <span>{{ method }}</span>
         </button>
       </div>
 
-      <ion-item lines="none" class="cash-input-item">
-        <ion-label position="stacked">Dinero Recibido ($)</ion-label>
-        <ion-input
-          type="number"
-          [value]="cashReceived"
-          (ionInput)="onCashReceivedChange($event)"
-          placeholder="0">
-        </ion-input>
+      <!-- Calculadora de vueltas -->
+      <div class="cash-card dk-card" *ngIf="paymentMethod === 'Efectivo'">
+        <div class="cash-head">
+          <ion-icon name="calculator-outline"></ion-icon>
+          <span>Efectivo recibido</span>
+        </div>
+
+        <div class="quick-cash-row">
+          <button
+            type="button"
+            class="quick-btn"
+            [class.active]="selectedCashOption === 'exact'"
+            (click)="setExactCash()">
+            Exacto
+          </button>
+          <button
+            type="button"
+            class="quick-btn dk-mono"
+            *ngFor="let amt of quickCashAmounts"
+            [class.active]="selectedCashOption === amt"
+            (click)="setQuickCash(amt)">
+            ${{ amt | number:'1.0-0' }}
+          </button>
+        </div>
+
+        <ion-item lines="none" class="dk-form-item cash-input">
+          <ion-label position="stacked">Monto recibido ($ COP)</ion-label>
+          <ion-input
+            type="number"
+            inputmode="numeric"
+            [value]="cashReceived"
+            (ionInput)="onCashReceivedChange($event)"
+            placeholder="0">
+          </ion-input>
+        </ion-item>
+
+        <div class="change-summary" [class.positive]="cashChange > 0 && !isCashInsufficient" [class.negative]="isCashInsufficient">
+          <span>{{ isCashInsufficient ? 'Faltan' : 'Cambio / Vueltas' }}</span>
+          <strong class="dk-mono">${{ (isCashInsufficient ? cashShortage : cashChange) | number:'1.0-0' }}</strong>
+        </div>
+      </div>
+
+      <!-- 3. Observaciones para cocina -->
+      <h3 class="dk-section-heading">3. Notas de cocina</h3>
+      <div class="quick-notes">
+        <button
+          type="button"
+          class="note-pill"
+          *ngFor="let note of quickNotes"
+          [class.active]="isChipSelected(note)"
+          (click)="toggleQuickNote(note)">
+          {{ note }}
+        </button>
+      </div>
+
+      <ion-item lines="none" class="dk-form-item">
+        <ion-label position="stacked">Nombre del cliente (opcional)</ion-label>
+        <ion-input formControlName="customerName" placeholder="Ej: Carlos, Laura..."></ion-input>
       </ion-item>
 
-      <div class="change-box" [class.positive]="cashChange > 0" [class.negative]="cashReceived && cashReceived < (total$ | async)!">
-        <span class="change-label">Cambio / Vueltas:</span>
-        <span class="change-value">${{ cashChange | number:'1.0-0' }}</span>
-      </div>
-    </div>
-
-    <!-- 4. Notas Rápidas de Cocina -->
-    <h3 class="section-label">3. Notas Rápidas (Cocina)</h3>
-    <div class="quick-notes-container">
-      <ion-chip
-        *ngFor="let note of quickNotes"
-        [color]="isChipSelected(note) ? 'warning' : 'medium'"
-        [outline]="!isChipSelected(note)"
-        (click)="toggleQuickNote(note)"
-        class="note-chip">
-        <ion-label>{{ note }}</ion-label>
-      </ion-chip>
-    </div>
-
-    <!-- 5. Formulario de Nombre y Observaciones -->
-    <form [formGroup]="checkoutForm" class="customer-form">
-      <ion-item lines="none" class="form-item">
-        <ion-label position="stacked">Nombre del Cliente (Opcional)</ion-label>
-        <ion-input formControlName="customerName" placeholder="Ej: Carlos, Juan..."></ion-input>
-      </ion-item>
-
-      <ion-item lines="none" class="form-item">
-        <ion-label position="stacked">Otras Observaciones</ion-label>
-        <ion-textarea formControlName="notes" placeholder="Detalles adicionales para cocina..." [rows]="2"></ion-textarea>
+      <ion-item lines="none" class="dk-form-item">
+        <ion-label position="stacked">Indicaciones adicionales</ion-label>
+        <ion-textarea formControlName="notes" placeholder="Instrucciones especiales para preparación..." [rows]="2"></ion-textarea>
       </ion-item>
     </form>
 
-    <!-- Botón de Confirmación -->
     <div class="checkout-actions">
-      <ion-button expand="block" color="success" (click)="confirmOrder()" size="large" class="confirm-btn">
+      <ion-button
+        expand="block"
+        color="success"
+        class="confirm-btn"
+        [disabled]="isSubmitting || isCashInsufficient"
+        (click)="confirmOrder()">
         <ion-icon name="checkmark-circle" slot="start"></ion-icon>
-        Confirmar Pedido (${{ (total$ | async) | number:'1.0-0' }})
+        Confirmar Pedido · ${{ currentTotal | number:'1.0-0' }}
       </ion-button>
     </div>
   </div>
