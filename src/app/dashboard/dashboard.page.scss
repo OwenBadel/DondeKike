@@ -93,6 +93,10 @@
 
   @media (min-width: 768px) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+
+    &.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 }
 
@@ -106,19 +110,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  cursor: pointer;
-  min-height: 76px;
+  min-height: 82px;
   box-shadow: var(--dk-shadow-xs);
-  transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
-
-  &:hover {
-    border-color: var(--dk-border-strong);
-    box-shadow: var(--dk-shadow-sm);
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
 
   .kpi-icon {
     width: 44px;
@@ -174,6 +167,15 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    .kpi-sub {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--dk-ink-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 }
 
@@ -181,6 +183,14 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 12px;
+
+  &.compact-two {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+
+    @media (min-width: 600px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
 }
 
 .module-card {
@@ -279,8 +289,138 @@
   }
 }
 
-.alert-panel {
+.dashboard-lower-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
   margin-top: 20px;
+
+  @media (min-width: 900px) {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  &.single-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.activity-panel {
+  overflow: hidden;
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--dk-surface-soft);
+    border-bottom: 1px solid var(--dk-border);
+  }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: var(--dk-text-sm);
+    color: var(--dk-ink);
+
+    ion-icon {
+      font-size: 18px;
+      color: var(--dk-brand);
+    }
+  }
+
+  .activity-list {
+    padding: 4px 16px;
+  }
+
+  .activity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--dk-border);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .activity-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .activity-top {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    strong {
+      font-size: var(--dk-text-sm);
+      color: var(--dk-brand);
+    }
+
+    .activity-customer {
+      font-size: var(--dk-text-sm);
+      font-weight: 700;
+      color: var(--dk-ink);
+    }
+
+    .activity-time {
+      font-size: 0.72rem;
+      color: var(--dk-ink-muted);
+    }
+  }
+
+  .activity-meta {
+    font-size: var(--dk-text-xs);
+    color: var(--dk-ink-muted);
+  }
+
+  .activity-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+
+    .activity-total {
+      font-size: var(--dk-text-sm);
+      font-weight: 700;
+      color: var(--dk-ink);
+    }
+  }
+
+  .empty-activity {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 28px 16px;
+    text-align: center;
+    color: var(--dk-ink-muted);
+
+    ion-icon {
+      font-size: 28px;
+      opacity: 0.6;
+    }
+
+    p {
+      margin: 0;
+      font-size: var(--dk-text-sm);
+    }
+  }
+}
+
+.alert-panel {
   overflow: hidden;
   border-color: #FDE68A;
 }
@@ -306,20 +446,6 @@
       font-size: 18px;
     }
   }
-
-  .link-btn {
-    background: transparent;
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    font-size: var(--dk-text-xs);
-    font-weight: 700;
-    color: var(--dk-brand-hover);
-    cursor: pointer;
-    min-height: 36px;
-    padding: 0 4px;
-  }
 }
 
 .alert-rows {
@@ -333,7 +459,6 @@
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--dk-border);
-  cursor: pointer;
 
   &:last-child {
     border-bottom: none;

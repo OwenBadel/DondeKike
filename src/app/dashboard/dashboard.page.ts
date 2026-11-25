@@ -9,6 +9,7 @@ import { CatalogService } from '../services/catalog.service';
 import { CartService } from '../services/cart.service';
 import { AlertService } from '../services/alert.service';
 import { Insumo } from '../models/product.model';
+import { Order, OrderStatus } from '../models/order.model';
 import { User, UserRole } from '../models/user.model';
 
 interface DashboardModuleItem {
@@ -42,9 +43,12 @@ export class DashboardPage implements OnInit {
   totalCatalog$!: Observable<number>;
   lowStockInsumos$!: Observable<Insumo[]>;
   pendingOrdersCount$!: Observable<number>;
+  inProgressOrdersCount$!: Observable<number>;
   todayCompletedCount$!: Observable<number>;
   todayRevenue$!: Observable<number>;
+  todayAverageTicket$!: Observable<number>;
   todayOrdersCount$!: Observable<number>;
+  recentTodayOrders$!: Observable<Order[]>;
 
   todayDate = new Date();
 
@@ -127,14 +131,35 @@ export class DashboardPage implements OnInit {
       map(orders => orders.length)
     );
 
+    this.inProgressOrdersCount$ = this.orderService.pendingOrders$.pipe(
+      map(orders => orders.filter(o => o.status === 'in-progress').length)
+    );
+
     this.todayCompletedCount$ = this.orderService.todayCompletedOrders$.pipe(
       map(orders => orders.length)
     );
 
     this.todayRevenue$ = this.orderService.getTodayRevenue();
 
+    this.todayAverageTicket$ = this.orderService.getTodayOrders().pipe(
+      map(orders => {
+        const valid = orders.filter(o => o.status !== 'cancelled' && o.status !== 'reversed');
+        if (valid.length === 0) return 0;
+        const total = valid.reduce((sum, o) => sum + o.total, 0);
+        return Math.round(total / valid.length);
+      })
+    );
+
     this.todayOrdersCount$ = this.orderService.getTodayOrders().pipe(
       map(orders => orders.length)
+    );
+
+    this.recentTodayOrders$ = this.orderService.getTodayOrders().pipe(
+      map(orders =>
+        [...orders]
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, 5)
+      )
     );
   }
 
@@ -166,6 +191,33 @@ export class DashboardPage implements OnInit {
 
   isMenuVisible(item: DashboardModuleItem, role: UserRole | null): boolean {
     return role ? item.roles.includes(role) : false;
+  }
+
+  getVisibleMenuCount(role: UserRole | null): number {
+    if (!role) return 0;
+    return this.menuItems.filter(item => item.roles.includes(role)).length;
+  }
+
+  getOrderStatusLabel(status: OrderStatus): string {
+    switch (status) {
+      case 'pending': return 'Pendiente';
+      case 'in-progress': return 'En cocina';
+      case 'completed': return 'Despachado';
+      case 'cancelled': return 'Cancelado';
+      case 'reversed': return 'Anulado';
+      default: return status;
+    }
+  }
+
+  getOrderStatusTone(status: OrderStatus): string {
+    switch (status) {
+      case 'pending': return 'warning';
+      case 'in-progress': return 'brand';
+      case 'completed': return 'success';
+      case 'cancelled':
+      case 'reversed': return 'danger';
+      default: return 'neutral';
+    }
   }
 
   getRoleLabel(role: UserRole): string {
