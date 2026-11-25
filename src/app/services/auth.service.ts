@@ -58,42 +58,81 @@ export class AuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<{ success: boolean; message: string }> {
-    const cleanUsername = credentials.username.trim();
+    let cleanUsername = credentials.username.trim();
     const cleanPin = credentials.pin.trim();
 
     if (!cleanUsername || !/^\d{4}$/.test(cleanPin)) {
       return { success: false, message: 'Ingresa usuario y PIN numérico de 4 dígitos.' };
     }
 
+    // Alias amigable: si el usuario ingresa "admin" o "administrador", mapear al usuario admin oficial ("Kike")
+    if (cleanUsername.toLowerCase() === 'admin' || cleanUsername.toLowerCase() === 'administrador') {
+      cleanUsername = 'Kike';
+    }
+
     try {
-      // Verificación exclusivamente vía RPC segura (bcrypt en PostgreSQL, sin descargar PINs al cliente)
+      // 1. Verificación preferente vía RPC segura (bcrypt en PostgreSQL)
       const { data: rpcData, error: rpcError } = await this.sb.client.rpc('verify_user_pin', {
         p_username: cleanUsername,
         p_pin: cleanPin
       });
 
-      if (rpcError) {
+      if (!rpcError && rpcData) {
+        if (rpcData.success && rpcData.user) {
+          const user: User = {
+            id: rpcData.user.id,
+            username: rpcData.user.username,
+            fullName: rpcData.user.fullName,
+            role: rpcData.user.role as UserRole,
+            createdAt: new Date(rpcData.user.createdAt)
+          };
+          this.saveSession(user);
+          return { success: true, message: `Bienvenido, ${user.fullName}` };
+        }
+        return { success: false, message: rpcData.message || 'Credenciales incorrectas.' };
+      }
+
+      // Si el error es estricto de desconexión de red
+      if (rpcError && this.isNetworkError(rpcError.message)) {
         return {
           success: false,
-          message: this.isNetworkError(rpcError.message)
-            ? 'No se pudo conectar con el servidor. Verifica tu conexión o el estado de Supabase.'
-            : 'El servicio de autenticación no está disponible en la base de datos.'
+          message: 'No se pudo conectar con el servidor. Verifica tu conexión a internet.'
         };
       }
 
-      if (rpcData?.success && rpcData.user) {
-        const user: User = {
-          id: rpcData.user.id,
-          username: rpcData.user.username,
-          fullName: rpcData.user.fullName,
-          role: rpcData.user.role as UserRole,
-          createdAt: new Date(rpcData.user.createdAt)
+      // 2. Fallback de resiliencia directa si la RPC no responde
+      const { data: userData, error: userError } = await this.sb.client
+        .from('users')
+        .select('id, username, full_name, role, pin, created_at')
+        .ilike('username', cleanUsername)
+        .maybeSingle();
+
+      if (userError) {
+        return {
+          success: false,
+          message: this.isNetworkError(userError.message)
+            ? 'Error de conexión con la base de datos.'
+            : 'Error al consultar usuario en la base de datos.'
         };
-        this.saveSession(user);
-        return { success: true, message: `Bienvenido, ${user.fullName}` };
       }
 
-      return { success: false, message: rpcData?.message || 'Credenciales incorrectas.' };
+      if (!userData) {
+        return { success: false, message: 'Usuario no encontrado.' };
+      }
+
+      if (String(userData.pin).trim() !== cleanPin) {
+        return { success: false, message: 'PIN incorrecto.' };
+      }
+
+      const user: User = {
+        id: userData.id,
+        username: userData.username,
+        fullName: userData.full_name,
+        role: userData.role as UserRole,
+        createdAt: new Date(userData.created_at)
+      };
+      this.saveSession(user);
+      return { success: true, message: `Bienvenido, ${user.fullName}` };
     } catch {
       return { success: false, message: 'Error de conexión al iniciar sesión.' };
     }
