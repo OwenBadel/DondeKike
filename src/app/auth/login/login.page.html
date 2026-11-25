@@ -9,27 +9,6 @@
         <p class="tagline">La esquina del sabor · Punto de Venta</p>
       </div>
 
-      <!-- Selección rápida táctil de usuarios (POS) -->
-      <div class="quick-users-block" *ngIf="quickUsers.length > 0">
-        <span class="field-label">Selecciona tu perfil</span>
-        <div class="quick-users-grid">
-          <button
-            *ngFor="let u of quickUsers"
-            type="button"
-            class="quick-user-chip"
-            [class.active]="username.toLowerCase() === u.username.toLowerCase()"
-            (click)="selectQuickUser(u)">
-            <span class="chip-avatar" [class.avatar-admin]="u.role === 'admin'">
-              {{ u.role === 'admin' ? '👑' : '🍽️' }}
-            </span>
-            <div class="chip-info">
-              <span class="chip-name">{{ u.fullName || u.username }}</span>
-              <span class="chip-role">{{ u.role === 'admin' ? 'Admin' : 'Mesero' }}</span>
-            </div>
-          </button>
-        </div>
-      </div>
-
       <!-- Usuario -->
       <div class="field-block">
         <label class="field-label" for="login-username">Usuario</label>

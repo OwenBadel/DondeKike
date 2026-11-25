@@ -3,7 +3,6 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { AlertService } from '../../services/alert.service';
 import { HapticsService } from '../../services/haptics.service';
-import { User } from '../../models/user.model';
 
 @Component({
   selector: 'app-login',
@@ -25,7 +24,6 @@ export class LoginPage implements OnInit, OnDestroy {
   errorMessage = '';
   isLoading = false;
   shakeDots = false;
-  quickUsers: User[] = [];
 
   numpadKeys = [
     ['1', '2', '3'],
@@ -43,9 +41,7 @@ export class LoginPage implements OnInit, OnDestroy {
     await this.authService.waitUntilReady();
     if (this.authService.isLoggedIn) {
       this.router.navigate(['/dashboard'], { replaceUrl: true });
-      return;
     }
-    await this.loadQuickUsers();
   }
 
   async ionViewWillEnter(): Promise<void> {
@@ -56,21 +52,6 @@ export class LoginPage implements OnInit, OnDestroy {
       return;
     }
     this.resetForm();
-    await this.loadQuickUsers();
-  }
-
-  async loadQuickUsers(): Promise<void> {
-    try {
-      this.quickUsers = await this.authService.getAllUsers();
-    } catch {
-      this.quickUsers = [];
-    }
-  }
-
-  selectQuickUser(user: User): void {
-    this.username = user.username;
-    this.showError = false;
-    this.haptics.tap();
   }
 
   ionViewWillLeave(): void {
